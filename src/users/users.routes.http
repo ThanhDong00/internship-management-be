@@ -1,0 +1,50 @@
+# export class CreateUserDto {
+#   email: string;
+#   username: string;
+#   password: string;
+#   full_name: string;
+#   phone_number?: string;
+#   dob?: Date;
+#   address?: string;
+#   role: 'admin' | 'mentor' | 'intern';
+#   status?: 'active' | 'inactive';
+#   is_assigned?: boolean;
+#   is_deleted?: boolean;
+#   intern_information?: CreateInternInformationDto;
+# }
+
+###
+# @name create-user
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "user1@gmail.com",
+  "username": "user1",
+  "password": "123456",
+  "full_name": "User1",
+  "role": "admin"
+}
+
+###
+# @name get-all-users
+GET http://localhost:3000/users
+
+### 
+# @name create-intern
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+
+  "email": "intern2@gmail.com",
+  "username": "intern2",
+  "password": "123456",
+  "full_name": "Intern2",
+  "role": "intern",
+  "intern_information": {
+    "field": "Software Engineering",
+    "start_date": "2025-07-14",
+    "end_date": "2025-08-14"
+  }
+}
