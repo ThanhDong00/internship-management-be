@@ -1,0 +1,15 @@
+###
+# @name create-skill
+POST http://localhost:3000/skills
+Content-Type: application/json
+
+{
+  "name": "NodeJS",
+  "description": "A JavaScript runtime built on Chrome's V8 JavaScript engine"
+}
+
+###
+# @name get-all-skills
+GET http://localhost:3000/skills
+
+
