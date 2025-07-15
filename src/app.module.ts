@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SkillsModule } from './skills/skills.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { InternsInformationModule } from './interns-information/interns-information.module';
 import 'dotenv/config';
 
 @Module({
@@ -25,6 +26,7 @@ import 'dotenv/config';
     SkillsModule,
     UsersModule,
     AuthModule,
+    InternsInformationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
