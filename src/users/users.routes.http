@@ -13,6 +13,8 @@
 #   intern_information?: CreateInternInformationDto;
 # }
 
+@id = fc219753-f9df-422f-b7bc-63f05f9dcc8f
+
 ###
 # @name create-user
 POST http://localhost:3000/users
@@ -48,3 +50,7 @@ Content-Type: application/json
     "end_date": "2025-08-14"
   }
 }
+
+###
+# @name get-user-by-id
+GET http://localhost:3000/users/{{id}}

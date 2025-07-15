@@ -25,4 +25,13 @@ export class InternsInformationService {
       );
     }
   }
+
+  async findByInternId(internId: string): Promise<InternInformation | null> {
+    return this.internInfoRepo.findOne({
+      where: {
+        intern_id: internId,
+        is_deleted: false,
+      },
+    });
+  }
 }

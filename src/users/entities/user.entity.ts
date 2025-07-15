@@ -1,3 +1,4 @@
+import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('users')
@@ -37,4 +38,6 @@ export class User {
 
   @Column({ default: false })
   is_deleted: boolean;
+
+  intern_information?: InternInformation | null;
 }
