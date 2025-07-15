@@ -6,6 +6,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { InternsInformationService } from 'src/interns-information/interns-information.service';
 import { UserDto } from './dto/user.dto';
 import { plainToInstance } from 'class-transformer';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -15,7 +16,7 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserDto> {
-    const password_hash = createUserDto.password;
+    const password_hash = await bcrypt.hash(createUserDto.password, 10);
 
     try {
       const user = this.usersRepository.create({
@@ -71,5 +72,20 @@ export class UsersService {
     }
 
     return plainToInstance(UserDto, user);
+  }
+
+  async findByUsername(username: string): Promise<User> {
+    const user = await this.usersRepository.findOne({
+      where: {
+        username: username,
+        is_deleted: false,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
   }
 }

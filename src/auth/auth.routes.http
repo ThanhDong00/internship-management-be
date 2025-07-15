@@ -1,0 +1,18 @@
+###
+# @name login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "intern1",
+  "password": "123456"
+}
+
+###
+@token = {{login.response.body.access_token}}
+
+# Authorization: Bearer {{token}}
+###
+# @name logout
+POST http://localhost:3000/auth/logout
+Authorization: Bearer {{token}}

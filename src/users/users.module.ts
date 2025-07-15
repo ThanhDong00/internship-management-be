@@ -9,5 +9,6 @@ import { InternsInformationModule } from 'src/interns-information/interns-inform
   imports: [TypeOrmModule.forFeature([User]), InternsInformationModule],
   controllers: [UsersController],
   providers: [UsersService],
+  exports: [UsersService],
 })
 export class UsersModule {}
