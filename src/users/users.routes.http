@@ -14,7 +14,7 @@
 # }
 
 @id = b0fb3562-e3e0-40bc-8f71-4532ed0174a4
-@token = {{login.response.body.access_token}}
+@token = {{login.response.body.data.access_token}}
 
 ###
 # @name login
@@ -33,10 +33,10 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "email": "mentor1@gmail.com",
-  "username": "mentor1",
+  "email": "mentor3@gmail.com",
+  "username": "mentor3",
   "password": "123456",
-  "fullName": "Mentor1",
+  "fullName": "Mentor3",
   "role": "mentor"
 }
 
