@@ -13,13 +13,13 @@ export class User {
   username: string;
 
   @Column()
-  password_hash: string;
+  passwordHash: string;
 
   @Column()
-  full_name: string;
+  fullName: string;
 
   @Column({ nullable: true })
-  phone_number: string;
+  phoneNumber: string;
 
   @Column({ nullable: true })
   dob: Date;
@@ -34,10 +34,10 @@ export class User {
   status: string;
 
   @Column({ default: false })
-  is_assigned: boolean;
+  isAssigned: boolean;
 
   @Column({ default: false })
-  is_deleted: boolean;
+  isDeleted: boolean;
 
-  intern_information?: InternInformation | null;
+  internInformation?: InternInformation | null;
 }

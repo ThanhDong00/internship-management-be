@@ -8,5 +8,5 @@ export class SkillDto {
   description: string;
 
   @Exclude()
-  is_deleted: boolean;
+  isDeleted: boolean;
 }

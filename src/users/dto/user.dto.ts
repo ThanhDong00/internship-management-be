@@ -9,11 +9,11 @@ export class UserDto {
   username: string;
 
   @Exclude()
-  password_hash: string;
+  passwordHash: string;
 
-  full_name: string;
+  fullName: string;
 
-  phone_number?: string;
+  phoneNumber?: string;
 
   dob?: Date;
 
@@ -23,9 +23,10 @@ export class UserDto {
 
   status?: 'active' | 'inactive';
 
-  is_assigned?: boolean;
+  isAssigned?: boolean;
 
-  is_deleted?: boolean;
+  @Exclude()
+  isDeleted?: boolean;
 
-  intern_information?: InternInformationDto;
+  internInformation?: InternInformationDto;
 }

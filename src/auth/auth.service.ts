@@ -14,8 +14,8 @@ export class AuthService {
   async validateUser(loginDto: LoginDto): Promise<any> {
     const user = await this.usersService.findByUsername(loginDto.username);
 
-    if (user && (await bcrypt.compare(loginDto.password, user.password_hash))) {
-      const { password_hash, ...result } = user;
+    if (user && (await bcrypt.compare(loginDto.password, user.passwordHash))) {
+      const { passwordHash, ...result } = user;
       return result;
     }
 
@@ -29,7 +29,9 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
       user: {
-        name: user.full_name,
+        id: user.id,
+        name: user.fullName,
+        email: user.email,
         role: user.role,
       },
     };

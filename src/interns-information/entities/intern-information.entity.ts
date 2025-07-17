@@ -9,19 +9,19 @@ export class InternInformation {
   field: string;
 
   @Column({ unique: true })
-  intern_id: string;
+  internId: string;
 
   @Column({ nullable: true })
-  mentor_id: string;
+  mentorId: string;
 
   @Column({ nullable: true })
-  plan_id: string;
+  planId: string;
 
   @Column()
-  start_date: Date;
+  startDate: Date;
 
   @Column()
-  end_date: Date;
+  endDate: Date;
 
   @Column('enum', {
     enum: ['Onboarding', 'InProgress', 'Completed'],
@@ -30,5 +30,5 @@ export class InternInformation {
   status: string;
 
   @Column({ default: false })
-  is_deleted: boolean;
+  isDeleted: boolean;
 }

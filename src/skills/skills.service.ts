@@ -22,7 +22,7 @@ export class SkillsService {
   async findAll(): Promise<SkillDto[]> {
     const skills = await this.skillRepository.find({
       where: {
-        is_deleted: false,
+        isDeleted: false,
       },
     });
     return plainToInstance(SkillDto, skills);
@@ -32,7 +32,7 @@ export class SkillsService {
     const skill = await this.skillRepository.findOne({
       where: {
         id: id,
-        is_deleted: false,
+        isDeleted: false,
       },
     });
     return plainToInstance(SkillDto, skill);
