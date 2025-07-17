@@ -1,11 +1,11 @@
 export class InternInformationDto {
   id: string;
   field: string;
-  intern_id: string;
-  mentor_id: string;
-  plan_id: string;
-  start_date: Date;
-  end_date: Date;
+  internId: string;
+  mentorId: string;
+  planId: string;
+  startDate: Date;
+  endDate: Date;
   status: string;
-  is_deleted: boolean;
+  isDeleted: boolean;
 }

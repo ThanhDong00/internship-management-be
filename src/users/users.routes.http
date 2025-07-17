@@ -13,7 +13,7 @@
 #   intern_information?: CreateInternInformationDto;
 # }
 
-@id = fc219753-f9df-422f-b7bc-63f05f9dcc8f
+@id = b0fb3562-e3e0-40bc-8f71-4532ed0174a4
 @token = {{login.response.body.access_token}}
 
 ###
@@ -22,7 +22,7 @@ POST http://localhost:3000/auth/login
 Content-Type: application/json
 
 {
-  "username": "mentor1",
+  "username": "admin1",
   "password": "123456"
 }
 
@@ -33,10 +33,10 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "email": "mentor2@gmail.com",
-  "username": "mentor2",
+  "email": "mentor1@gmail.com",
+  "username": "mentor1",
   "password": "123456",
-  "full_name": "Mentor2",
+  "fullName": "Mentor1",
   "role": "mentor"
 }
 
@@ -53,15 +53,15 @@ Authorization: Bearer {{token}}
 
 {
 
-  "email": "intern2@gmail.com",
-  "username": "intern2",
+  "email": "intern1@gmail.com",
+  "username": "intern1",
   "password": "123456",
-  "full_name": "Intern2",
+  "fullName": "Intern1",
   "role": "intern",
-  "intern_information": {
+  "internInformation": {
     "field": "Software Engineering",
-    "start_date": "2025-07-14",
-    "end_date": "2025-08-14"
+    "startDate": "2025-07-14",
+    "endDate": "2025-08-14"
   }
 }
 
