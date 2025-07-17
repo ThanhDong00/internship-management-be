@@ -7,6 +7,8 @@ import { InternsInformationService } from 'src/interns-information/interns-infor
 import { UserDto } from './dto/user.dto';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
+import { SimpleUserDto } from './dto/simple-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -43,48 +45,104 @@ export class UsersService {
   }
 
   async findAll(): Promise<UserDto[]> {
-    const users = await this.usersRepository.find({
-      where: {
-        isDeleted: false,
-      },
-    });
+    try {
+      const users = await this.usersRepository.find({
+        where: {
+          isDeleted: false,
+        },
+      });
 
-    return plainToInstance(UserDto, users);
+      return plainToInstance(UserDto, users);
+    } catch (error) {
+      throw new HttpException('Error fetching users: ' + error.message, 500);
+    }
   }
 
   async findOne(id: string): Promise<UserDto> {
-    const user = await this.usersRepository.findOne({
-      where: {
-        id: id,
-        isDeleted: false,
-      },
-    });
+    try {
+      const user = await this.usersRepository.findOne({
+        where: {
+          id: id,
+          isDeleted: false,
+        },
+      });
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (user.role === 'intern') {
+        user.internInformation = await this.internsInfoService.findByInternId(
+          user.id,
+        );
+      }
+
+      return plainToInstance(UserDto, user);
+    } catch (error) {
+      throw new HttpException('Error fetching user: ' + error.message, 500);
     }
-
-    if (user.role === 'intern') {
-      user.internInformation = await this.internsInfoService.findByInternId(
-        user.id,
-      );
-    }
-
-    return plainToInstance(UserDto, user);
   }
 
   async findByUsername(username: string): Promise<User> {
-    const user = await this.usersRepository.findOne({
-      where: {
-        username: username,
-        isDeleted: false,
-      },
-    });
+    try {
+      const user = await this.usersRepository.findOne({
+        where: {
+          username: username,
+          isDeleted: false,
+        },
+      });
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      return user;
+    } catch (error) {
+      throw new HttpException('Error fetching user: ' + error.message, 500);
     }
+  }
 
-    return user;
+  async findSimpleInfo(id: string): Promise<SimpleUserDto> {
+    try {
+      const user = await this.usersRepository.findOne({
+        where: {
+          id: id,
+          isDeleted: false,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      return plainToInstance(SimpleUserDto, user, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new HttpException('Error fetching user: ' + error.message, 500);
+    }
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<UserDto> {
+    try {
+      const user = await this.findSimpleInfo(id);
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // if have password in update data, remove it
+      if (updateUserDto.password) {
+        delete updateUserDto.password;
+      }
+      await this.usersRepository.save({ id, ...updateUserDto });
+
+      return this.findOne(id);
+    } catch (error) {
+      throw new HttpException('Error updating user:' + error.message, 500);
+    }
   }
 }
