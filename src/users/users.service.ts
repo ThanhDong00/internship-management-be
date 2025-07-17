@@ -16,12 +16,12 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserDto> {
-    const password_hash = await bcrypt.hash(createUserDto.password, 10);
+    const passwordHash = await bcrypt.hash(createUserDto.password, 10);
 
     try {
       const user = this.usersRepository.create({
         ...createUserDto,
-        password_hash: password_hash,
+        passwordHash: passwordHash,
       });
 
       const newUser = await this.usersRepository.save(user);
@@ -29,11 +29,10 @@ export class UsersService {
       // If role is 'intern', create intern information
       if (createUserDto.role === 'intern') {
         await this.internsInfoService.create({
-          intern_id: newUser.id,
-          field: createUserDto.intern_information?.field,
-          start_date:
-            createUserDto.intern_information?.start_date || new Date(),
-          end_date: createUserDto.intern_information?.end_date || new Date(),
+          internId: newUser.id,
+          field: createUserDto.internInformation?.field,
+          startDate: createUserDto.internInformation?.startDate || new Date(),
+          endDate: createUserDto.internInformation?.endDate || new Date(),
         });
       }
 
@@ -46,7 +45,7 @@ export class UsersService {
   async findAll(): Promise<UserDto[]> {
     const users = await this.usersRepository.find({
       where: {
-        is_deleted: false,
+        isDeleted: false,
       },
     });
 
@@ -57,7 +56,7 @@ export class UsersService {
     const user = await this.usersRepository.findOne({
       where: {
         id: id,
-        is_deleted: false,
+        isDeleted: false,
       },
     });
 
@@ -66,7 +65,7 @@ export class UsersService {
     }
 
     if (user.role === 'intern') {
-      user.intern_information = await this.internsInfoService.findByInternId(
+      user.internInformation = await this.internsInfoService.findByInternId(
         user.id,
       );
     }
@@ -78,7 +77,7 @@ export class UsersService {
     const user = await this.usersRepository.findOne({
       where: {
         username: username,
-        is_deleted: false,
+        isDeleted: false,
       },
     });
 

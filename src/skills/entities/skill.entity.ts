@@ -12,5 +12,5 @@ export class Skill {
   description: string;
 
   @Column({ default: false })
-  is_deleted: boolean;
+  isDeleted: boolean;
 }

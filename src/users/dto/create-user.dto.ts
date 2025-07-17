@@ -4,13 +4,13 @@ export class CreateUserDto {
   email: string;
   username: string;
   password: string;
-  full_name: string;
-  phone_number?: string;
+  fullName: string;
+  phoneNumber?: string;
   dob?: Date;
   address?: string;
   role: 'admin' | 'mentor' | 'intern';
   status?: 'active' | 'inactive';
-  is_assigned?: boolean;
-  is_deleted?: boolean;
-  intern_information?: CreateInternInformationDto;
+  isAssigned?: boolean;
+  isDeleted?: boolean;
+  internInformation?: CreateInternInformationDto;
 }
