@@ -1,15 +1,51 @@
+@token = {{login.response.body.data.access_token}}
+@id= ab7f5ac7-bf74-45a6-85e5-f2e1fcd5cd38
+
+###
+# @name login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "intern1",
+  "password": "123456"
+}
+
 ###
 # @name create-skill
 POST http://localhost:3000/skills
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
-  "name": "NodeJS",
-  "description": "A JavaScript runtime built on Chrome's V8 JavaScript engine"
+  "name": "1",
+  "description": "1"
 }
 
 ###
 # @name get-all-skills
+GET http://localhost:3000/skills/all
+Authorization: Bearer {{token}}
+
+
+###
+# @name get-all-skills-by-userid
 GET http://localhost:3000/skills
+Authorization: Bearer {{token}}
 
 
+###
+# @name get-skill-by-id
+GET http://localhost:3000/skills/{{id}}
+Authorization: Bearer {{token}}
+
+###
+# @name update-skill
+PUT http://localhost:3000/skills/{{id}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "4",
+  "description": "4"
+}

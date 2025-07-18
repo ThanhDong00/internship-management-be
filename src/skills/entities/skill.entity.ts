@@ -8,8 +8,11 @@ export class Skill {
   @Column()
   name: string;
 
-  @Column()
+  @Column({ nullable: true })
   description: string;
+
+  @Column()
+  createdBy: string;
 
   @Column({ default: false })
   isDeleted: boolean;

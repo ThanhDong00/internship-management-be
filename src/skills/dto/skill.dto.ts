@@ -7,6 +7,8 @@ export class SkillDto {
 
   description: string;
 
+  createdBy: string;
+
   @Exclude()
   isDeleted: boolean;
 }
