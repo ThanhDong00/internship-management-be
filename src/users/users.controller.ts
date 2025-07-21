@@ -15,7 +15,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/auth/decorators/user.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -24,6 +24,34 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @ApiOperation({ summary: 'Create a new user' })
+  @ApiBody({
+    type: CreateUserDto,
+    examples: {
+      admin: {
+        value: {
+          email: 'admin1@example.com',
+          username: 'admin1',
+          password: '123456',
+          fullName: 'Admin1',
+          role: 'admin',
+        },
+      },
+      intern: {
+        value: {
+          email: 'intern1@example.com',
+          username: 'intern1',
+          password: '123456',
+          fullName: 'Intern1',
+          role: 'intern',
+          internInformation: {
+            field: 'Software Engineering',
+            startDate: '2025-07-14',
+            endDate: '2025-08-14',
+          },
+        },
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post()
