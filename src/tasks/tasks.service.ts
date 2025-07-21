@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
+import { TaskDto } from './dto/task.dto';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class TasksService {
@@ -23,9 +25,16 @@ export class TasksService {
     });
   }
 
-  async findOne(id: string, user: SimpleUserDto): Promise<Task | null> {
-    return await this.taskRepository.findOne({
+  async findOne(id: string, user: SimpleUserDto): Promise<TaskDto | null> {
+    const task = await this.taskRepository.findOne({
       where: { id, isDeleted: false, createdBy: user.id },
+      relations: ['creator'],
+    });
+
+    if (!task) return null;
+
+    return plainToInstance(TaskDto, task, {
+      excludeExtraneousValues: true,
     });
   }
 
