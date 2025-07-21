@@ -15,11 +15,15 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/auth/decorators/user.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @ApiOperation({ summary: 'Create a new user' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post()
@@ -27,6 +31,7 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
+  @ApiOperation({ summary: 'Get all users' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get()
@@ -34,6 +39,7 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @ApiOperation({ summary: 'Get user profile' })
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@User() user: any) {
@@ -44,6 +50,7 @@ export class UsersController {
     return this.usersService.findOne(user.id);
   }
 
+  @ApiOperation({ summary: 'Get a user by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get(':id')
@@ -51,12 +58,14 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
+  @ApiOperation({ summary: 'Update user profile' })
   @UseGuards(JwtAuthGuard)
   @Put('profile')
   async updateProfile(@User() user: any, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(user.id, updateUserDto);
   }
 
+  @ApiOperation({ summary: 'Update a user by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Put(':id')

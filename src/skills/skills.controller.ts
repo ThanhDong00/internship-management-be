@@ -17,11 +17,15 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/auth/decorators/user.decorator';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('skills')
+@ApiBearerAuth()
 @Controller('skills')
 export class SkillsController {
   constructor(private readonly skillsService: SkillsService) {}
 
+  @ApiOperation({ summary: 'Create a new skill' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Post()
@@ -29,6 +33,7 @@ export class SkillsController {
     return await this.skillsService.create(createSkillDto, user.id);
   }
 
+  @ApiOperation({ summary: 'Get all skills' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get('all')
@@ -36,12 +41,14 @@ export class SkillsController {
     return await this.skillsService.findAll();
   }
 
+  @ApiOperation({ summary: 'Get all skills for a user' })
   @UseGuards(JwtAuthGuard)
   @Get()
   async findAllByUserId(@User() user: any) {
     return await this.skillsService.findAllByUserId(user.id);
   }
 
+  @ApiOperation({ summary: 'Get a skill by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Get(':id')
@@ -55,6 +62,7 @@ export class SkillsController {
     return skill;
   }
 
+  @ApiOperation({ summary: 'Update a skill by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Put(':id')
@@ -76,6 +84,7 @@ export class SkillsController {
     return updatedSkill;
   }
 
+  @ApiOperation({ summary: 'Delete a skill by ID, not implemented' })
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.skillsService.remove(id);

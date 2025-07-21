@@ -15,13 +15,17 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/auth/decorators/user.decorator';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('interns-information')
+@ApiBearerAuth()
 @Controller('interns-information')
 export class InternsInformationController {
   constructor(
     private readonly internsInformationService: InternsInformationService,
   ) {}
 
+  @ApiOperation({ summary: 'Get all interns information' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get()
@@ -35,6 +39,7 @@ export class InternsInformationController {
     }
   }
 
+  @ApiOperation({ summary: 'Get intern information by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin') // Not sure
   @Get(':id')
@@ -56,6 +61,7 @@ export class InternsInformationController {
     }
   }
 
+  @ApiOperation({ summary: 'Update intern status by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Put(':id/status')
@@ -73,6 +79,7 @@ export class InternsInformationController {
     }
   }
 
+  @ApiOperation({ summary: 'Update intern training plan by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Put(':id/plan')
@@ -110,6 +117,7 @@ export class InternsInformationController {
     }
   }
 
+  @ApiOperation({ summary: 'Update intern mentor by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Put(':id/mentor')
@@ -130,6 +138,7 @@ export class InternsInformationController {
     }
   }
 
+  @ApiOperation({ summary: 'Update intern information by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Put(':id')
