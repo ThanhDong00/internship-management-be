@@ -1,0 +1,63 @@
+@token = {{login.response.body.data.access_token}}
+@id=bbca43e4-2778-4127-a44d-ae19ee099246
+
+###
+# @name login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin1",
+  "password": "123456"
+}
+
+###
+# @name get-all-interns-info
+GET http://localhost:3000/interns-information
+Authorization: Bearer {{token}}
+
+###
+# @name get-intern-info
+GET http://localhost:3000/interns-information/{{id}}
+Authorization: Bearer {{token}}
+
+###
+# @name update-status
+PUT http://localhost:3000/interns-information/{{id}}/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "InProgress"
+}
+
+
+###
+# @name update-plan
+PUT http://localhost:3000/interns-information/{{id}}/plan
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "planId": "new-plan-id"
+}
+
+###
+# @name update-mentor
+PUT http://localhost:3000/interns-information/{{id}}/mentor
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "mentorId": "5ce9f8fc-7c97-462a-93ab-278a8b873926"
+}
+
+###
+# @name update
+PUT http://localhost:3000/interns-information/{{id}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "Onboarding"
+}
