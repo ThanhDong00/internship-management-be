@@ -1,0 +1,46 @@
+@token = {{login.response.body.data.access_token}}
+@id= d615eee5-564d-4fa5-ad82-85d47a8b05e2
+
+###
+# @name login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "mentor1",
+  "password": "123456"
+}
+
+###
+# @name create-task
+POST http://localhost:3000/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Task2-1"
+}
+
+###
+# @name get-all-tasks
+GET http://localhost:3000/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+# @name get-task-by-id
+GET http://localhost:3000/tasks/{{id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+###
+# @name update-task
+PUT http://localhost:3000/tasks/{{id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Task1-1 Updated1"
+}
+
