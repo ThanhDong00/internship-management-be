@@ -18,8 +18,10 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('training-plans')
+@ApiBearerAuth()
 @Controller('training-plans')
 export class TrainingPlansController {
   constructor(private readonly trainingPlansService: TrainingPlansService) {}
