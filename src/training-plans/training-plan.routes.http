@@ -1,0 +1,56 @@
+@token = {{login.response.body.data.access_token}}
+@id= 35478c12-abea-4e7c-a60a-e6b308156ce9
+@skillId1= {{getAllSkills.response.body.data[0].id}}
+@skillId2= {{getAllSkills.response.body.data[1].id}}
+
+###
+# @name login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "mentor1",
+  "password": "123456"
+}
+
+###
+# @name getAllSkills
+GET http://localhost:3000/skills
+Authorization: Bearer {{token}}
+
+###
+# @name create-training-plan
+POST http://localhost:3000/training-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "New Training Plan",
+  "description": "Description of the training plan",
+  "extra": "Additional information about the training plan",
+  "skills": [
+    "{{skillId1}}",
+    "{{skillId2}}"
+  ]
+}
+
+###
+# @name getTrainingPlan
+GET http://localhost:3000/training-plans/{{id}}
+Authorization: Bearer {{token}}
+
+###
+# @name updateTrainingPlan
+PUT http://localhost:3000/training-plans/{{id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Training Plan",
+  "description": "Description of the training plan",
+  "extra": "Additional information about the training plan",
+  "skills": [
+    "{{skillId1}}",
+    "{{skillId2}}"
+  ]
+}
