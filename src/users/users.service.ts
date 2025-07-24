@@ -16,6 +16,17 @@ import { SimpleUserDto } from './dto/simple-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
 
+export interface FindAllUsersResponse {
+  users: UserDto[];
+  total: {
+    intern: number;
+    mentor: number;
+    admin: number;
+    completedIntern: number;
+    isAssigned: number;
+  };
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -59,7 +70,7 @@ export class UsersService {
     }
   }
 
-  async findAll(role?: string): Promise<UserDto[]> {
+  async findAll(role?: string): Promise<FindAllUsersResponse> {
     try {
       const whereCondition: any = {
         isDeleted: false,
@@ -75,7 +86,22 @@ export class UsersService {
         relations: ['internInformation'],
       });
 
-      return plainToInstance(UserDto, users);
+      const total = {
+        intern: users.filter((user) => user.role === 'intern').length,
+        mentor: users.filter((user) => user.role === 'mentor').length,
+        admin: users.filter((user) => user.role === 'admin').length,
+        completedIntern: users.filter(
+          (user) =>
+            user.role === 'intern' &&
+            user.internInformation?.status === 'Completed',
+        ).length,
+        isAssigned: users.filter((user) => user.isAssigned).length,
+      };
+
+      return {
+        users: plainToInstance(UserDto, users),
+        total,
+      };
     } catch (error) {
       throw new HttpException('Error fetching users: ' + error.message, 500);
     }

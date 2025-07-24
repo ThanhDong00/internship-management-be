@@ -42,7 +42,7 @@ Authorization: Bearer {{token}}
 
 ###
 # @name get-all-users
-GET http://localhost:3000/users
+GET http://localhost:3000/users?role=mentor
 Authorization: Bearer {{token}}
 
 ### 
