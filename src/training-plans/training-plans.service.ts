@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -140,6 +141,12 @@ export class TrainingPlansService {
 
     if (!existingTrainingPlan) {
       throw new NotFoundException(`Training plan ${id} not found`);
+    }
+
+    if (user.role === 'mentor' && existingTrainingPlan.createdBy !== user.id) {
+      throw new ForbiddenException(
+        'You do not have permission to update this training plan',
+      );
     }
 
     const { skills, ...updatePlanData } = updateData;

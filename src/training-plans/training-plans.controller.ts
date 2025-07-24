@@ -18,11 +18,13 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('training-plans')
 export class TrainingPlansController {
   constructor(private readonly trainingPlansService: TrainingPlansService) {}
 
+  @ApiOperation({ summary: 'Create a training plan' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Post()
@@ -40,6 +42,9 @@ export class TrainingPlansController {
     }
   }
 
+  @ApiOperation({
+    summary: 'Get all training plans for the authenticated user',
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Get()
@@ -47,6 +52,7 @@ export class TrainingPlansController {
     return this.trainingPlansService.findAllByUser(user.id);
   }
 
+  @ApiOperation({ summary: 'Get all training plans' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get('all')
@@ -54,6 +60,7 @@ export class TrainingPlansController {
     return this.trainingPlansService.findAll();
   }
 
+  @ApiOperation({ summary: 'Get a training plan by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Get(':id')
@@ -77,6 +84,7 @@ export class TrainingPlansController {
     }
   }
 
+  @ApiOperation({ summary: 'Update a training plan by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Put(':id')
