@@ -1,5 +1,5 @@
 import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('users')
 export class User {
@@ -39,5 +39,10 @@ export class User {
   @Column({ default: false })
   isDeleted: boolean;
 
+  // Relationship với intern information (chỉ có khi user.role === 'intern')
+  @OneToOne(() => InternInformation, (internInfo) => internInfo.intern, {
+    nullable: true,
+    cascade: true, // Tự động lưu/xóa intern information khi lưu/xóa user
+  })
   internInformation?: InternInformation | null;
 }
