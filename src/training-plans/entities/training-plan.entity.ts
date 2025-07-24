@@ -21,6 +21,12 @@ export class TrainingPlan {
   @Column({ default: false })
   isDeleted: boolean;
 
-  @OneToMany(() => TrainingPlanSkill, (skill) => skill.plan)
+  @OneToMany(
+    () => TrainingPlanSkill,
+    (trainingPlanSkill) => trainingPlanSkill.plan,
+    {
+      cascade: true,
+    },
+  )
   skills: TrainingPlanSkill[];
 }

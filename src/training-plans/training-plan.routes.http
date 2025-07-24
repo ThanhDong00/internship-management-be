@@ -38,3 +38,19 @@ Content-Type: application/json
 # @name getTrainingPlan
 GET http://localhost:3000/training-plans/{{id}}
 Authorization: Bearer {{token}}
+
+###
+# @name updateTrainingPlan
+PUT http://localhost:3000/training-plans/{{id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Training Plan",
+  "description": "Description of the training plan",
+  "extra": "Additional information about the training plan",
+  "skills": [
+    "{{skillId1}}",
+    "{{skillId2}}"
+  ]
+}

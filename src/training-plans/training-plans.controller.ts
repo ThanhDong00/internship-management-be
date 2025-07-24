@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { TrainingPlansService } from './training-plans.service';
@@ -16,6 +17,7 @@ import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
+import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
 
 @Controller('training-plans')
 export class TrainingPlansController {
@@ -40,10 +42,24 @@ export class TrainingPlansController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
+  @Get()
+  async findAllByUser(@User() user: SimpleUserDto) {
+    return this.trainingPlansService.findAllByUser(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Get('all')
+  async findAll() {
+    return this.trainingPlansService.findAll();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string, @User() user: SimpleUserDto) {
     try {
-      const trainingPlan = await this.trainingPlansService.findOne(id);
+      const trainingPlan = await this.trainingPlansService.findOne(id, user);
 
       if (!trainingPlan) {
         throw new NotFoundException('Training plan not found');
@@ -58,6 +74,21 @@ export class TrainingPlansController {
       throw new InternalServerErrorException(
         'Failed to retrieve training plan',
       );
+    }
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() updateTrainingPlanDto: UpdateTrainingPlanDto,
+    @User() user: SimpleUserDto,
+  ) {
+    try {
+      return this.trainingPlansService.update(id, updateTrainingPlanDto, user);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to update training plan');
     }
   }
 }

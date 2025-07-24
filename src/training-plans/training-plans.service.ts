@@ -11,6 +11,7 @@ import { CreateTrainingPlanDto } from './dto/create-training-plan.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 import { Skill } from 'src/skills/entities/skill.entity';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
+import e from 'express';
 
 @Injectable()
 export class TrainingPlansService {
@@ -77,7 +78,6 @@ export class TrainingPlansService {
       await this.validateSkillsExist(skills);
     }
 
-    // Transaction
     return await this.dataSource.transaction(async (manager) => {
       const trainingPlan = manager.create(TrainingPlan, {
         ...createData,
@@ -139,12 +139,46 @@ export class TrainingPlansService {
     const existingTrainingPlan = await this.findOne(id, user);
 
     if (!existingTrainingPlan) {
-      throw new NotFoundException(`Training plan not found`);
+      throw new NotFoundException(`Training plan ${id} not found`);
     }
 
-    // use transaction to update training plan and its skills
+    const { skills, ...updatePlanData } = updateData;
 
-    // temporary return
-    return existingTrainingPlan;
+    if (skills && skills.length > 0) {
+      await this.validateSkillsExist(skills);
+    }
+
+    const updatedTrainingPlanId = await this.dataSource.transaction(
+      async (manager) => {
+        Object.assign(existingTrainingPlan, updatePlanData);
+        await manager.save(TrainingPlan, existingTrainingPlan);
+
+        if (skills && skills.length > 0) {
+          await manager.delete(TrainingPlanSkill, {
+            planId: existingTrainingPlan.id,
+          });
+
+          const trainingPlanSkills = skills.map((skillId) =>
+            manager.create(TrainingPlanSkill, {
+              planId: existingTrainingPlan.id,
+              skillId: skillId,
+            }),
+          );
+          await manager.save(TrainingPlanSkill, trainingPlanSkills);
+        }
+
+        return existingTrainingPlan.id;
+      },
+    );
+
+    const updatedTrainingPlan = await this.findOne(updatedTrainingPlanId, user);
+
+    if (!updatedTrainingPlan) {
+      throw new NotFoundException(
+        `Error when updating: Training plan ${updatedTrainingPlanId} not found`,
+      );
+    }
+
+    return updatedTrainingPlan;
   }
 }
