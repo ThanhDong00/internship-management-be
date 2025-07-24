@@ -105,6 +105,19 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: 'Update user profile' })
+  @ApiBody({
+    type: UpdateUserDto,
+    examples: {
+      all: {
+        value: {
+          fullName: 'Updated User Name',
+          phoneNumber: '1234567890',
+          address: '123 Updated Street',
+          dob: '1990-01-01',
+        },
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Put('profile')
   async updateProfile(@User() user: any, @Body() updateUserDto: UpdateUserDto) {
@@ -113,6 +126,24 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: 'Update a user by ID' })
+  @ApiBody({
+    type: UpdateUserDto,
+    examples: {
+      admin: {
+        value: {
+          fullName: 'Updated Admin Name',
+        },
+      },
+      intern: {
+        value: {
+          fullName: 'Updated Intern Name',
+          internInformation: {
+            field: 'Updated Field',
+          },
+        },
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Put(':id')
