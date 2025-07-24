@@ -13,7 +13,7 @@
 #   intern_information?: CreateInternInformationDto;
 # }
 
-@id = b0fb3562-e3e0-40bc-8f71-4532ed0174a4
+@id = 2a827f6b-918a-4c83-97f1-b55a78aa3af7
 @token = {{login.response.body.data.access_token}}
 
 ###
@@ -22,7 +22,7 @@ POST http://localhost:3000/auth/login
 Content-Type: application/json
 
 {
-  "username": "mentor1",
+  "username": "admin1",
   "password": "123456"
 }
 
@@ -33,11 +33,11 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "email": "mentor3@gmail.com",
-  "username": "mentor3",
+  "email": "admin3@gmail.com",
+  "username": "admin3",
   "password": "123456",
-  "fullName": "Mentor3",
-  "role": "mentor"
+  "fullName": "Admin3",
+  "role": "admin"
 }
 
 ###
@@ -53,13 +53,13 @@ Authorization: Bearer {{token}}
 
 {
 
-  "email": "intern1@gmail.com",
-  "username": "intern1",
+  "email": "intern3@gmail.com",
+  "username": "intern3",
   "password": "123456",
-  "fullName": "Intern1",
+  "fullName": "Intern3",
   "role": "intern",
   "internInformation": {
-    "field": "Software Engineering",
+    "field": "Frontend Development",
     "startDate": "2025-07-14",
     "endDate": "2025-08-14"
   }
@@ -84,7 +84,10 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "fullName": "Intern1"
+  "fullName": "Intern1-5",
+  "internInformation": {
+    "field": "Intern Software Engineering"
+  }
 }
 
 ###
@@ -94,5 +97,5 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "fullName": "Mentor1"
+  "fullName": "Intern1-9"
 }

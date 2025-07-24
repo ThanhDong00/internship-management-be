@@ -1,7 +1,12 @@
-import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InternsInformationService } from 'src/interns-information/interns-information.service';
 import { UserDto } from './dto/user.dto';
@@ -9,47 +14,65 @@ import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { SimpleUserDto } from './dto/simple-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
     private readonly internsInfoService: InternsInformationService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserDto> {
     const passwordHash = await bcrypt.hash(createUserDto.password, 10);
+    let savedUserId = '';
 
     try {
-      const user = this.usersRepository.create({
-        ...createUserDto,
-        passwordHash: passwordHash,
+      await this.dataSource.transaction(async (manager) => {
+        const { internInformation, password, ...userDataOnly } = createUserDto;
+
+        const user = manager.create(User, {
+          ...userDataOnly,
+          passwordHash: passwordHash,
+        });
+
+        const savedUser = await manager.save(User, user);
+
+        if (createUserDto.role === 'intern' && internInformation) {
+          const internInfo = manager.create(InternInformation, {
+            internId: savedUser.id,
+            field: internInformation.field,
+            startDate: internInformation.startDate || new Date(),
+            endDate: internInformation.endDate || new Date(),
+          });
+
+          await manager.save(InternInformation, internInfo);
+        }
+
+        savedUserId = savedUser.id;
       });
 
-      const newUser = await this.usersRepository.save(user);
-
-      // If role is 'intern', create intern information
-      if (createUserDto.role === 'intern') {
-        await this.internsInfoService.create({
-          internId: newUser.id,
-          field: createUserDto.internInformation?.field,
-          startDate: createUserDto.internInformation?.startDate || new Date(),
-          endDate: createUserDto.internInformation?.endDate || new Date(),
-        });
-      }
-
-      return plainToInstance(UserDto, newUser);
+      return await this.findOne(savedUserId);
     } catch (error) {
       throw new HttpException('Error creating user: ' + error.message, 500);
     }
   }
 
-  async findAll(): Promise<UserDto[]> {
+  async findAll(role?: string): Promise<UserDto[]> {
     try {
+      const whereCondition: any = {
+        isDeleted: false,
+      };
+
+      // Nếu có role parameter, thêm vào điều kiện where
+      if (role) {
+        whereCondition.role = role;
+      }
+
       const users = await this.usersRepository.find({
-        where: {
-          isDeleted: false,
-        },
+        where: whereCondition,
+        relations: ['internInformation'],
       });
 
       return plainToInstance(UserDto, users);
@@ -59,28 +82,19 @@ export class UsersService {
   }
 
   async findOne(id: string): Promise<UserDto> {
-    try {
-      const user = await this.usersRepository.findOne({
-        where: {
-          id: id,
-          isDeleted: false,
-        },
-      });
+    const user = await this.usersRepository.findOne({
+      where: {
+        id: id,
+        isDeleted: false,
+      },
+      relations: ['internInformation'],
+    });
 
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
-
-      if (user.role === 'intern') {
-        user.internInformation = await this.internsInfoService.findByInternId(
-          user.id,
-        );
-      }
-
-      return plainToInstance(UserDto, user);
-    } catch (error) {
-      throw new HttpException('Error fetching user: ' + error.message, 500);
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
+
+    return plainToInstance(UserDto, user);
   }
 
   async findByUsername(username: string): Promise<User> {
@@ -128,21 +142,54 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<UserDto> {
     try {
-      const user = await this.findSimpleInfo(id);
+      await this.dataSource.transaction(async (manager) => {
+        const user = await this.findOne(id);
+
+        const { password, internInformation, ...updateUserData } =
+          updateUserDto;
+
+        Object.assign(user, updateUserData);
+
+        if (
+          user.role === 'intern' &&
+          internInformation &&
+          user.internInformation
+        ) {
+          Object.assign(user.internInformation, internInformation);
+          await manager.save(InternInformation, user.internInformation);
+        }
+
+        await manager.save(User, user);
+      });
+
+      return this.findOne(id);
+    } catch (error) {
+      throw new HttpException('Error updating user:' + error.message, 500);
+    }
+  }
+
+  async updateProfile(
+    id: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<UserDto> {
+    try {
+      const { password, internInformation, ...updateData } = updateUserDto;
+      const user = await this.usersRepository.findOne({
+        where: { id: id, isDeleted: false },
+      });
 
       if (!user) {
         throw new NotFoundException('User not found');
       }
 
-      // if have password in update data, remove it
-      if (updateUserDto.password) {
-        delete updateUserDto.password;
-      }
-      await this.usersRepository.save({ id, ...updateUserDto });
+      Object.assign(user, updateData);
+      await this.usersRepository.save(user);
 
-      return this.findOne(id);
+      console.log('User profile updated:', user);
+
+      return plainToInstance(UserDto, user);
     } catch (error) {
-      throw new HttpException('Error updating user:' + error.message, 500);
+      throw new InternalServerErrorException('Error updating user profile');
     }
   }
 }

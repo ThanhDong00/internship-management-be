@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -15,7 +16,14 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/auth/decorators/user.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FindUsersQueryDto } from './dto/find-users-query.dto';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -59,12 +67,22 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
-  @ApiOperation({ summary: 'Get all users' })
+  @ApiOperation({
+    summary: 'Get all users',
+    description:
+      'Get all users. Use ?role=admin|mentor|intern to filter by role',
+  })
+  @ApiQuery({
+    name: 'role',
+    required: false,
+    enum: ['admin', 'mentor', 'intern'],
+    description: 'Filter users by role',
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get()
-  async findAll() {
-    return this.usersService.findAll();
+  async findAll(@Query() query: FindUsersQueryDto) {
+    return this.usersService.findAll(query.role);
   }
 
   @ApiOperation({ summary: 'Get user profile' })
@@ -87,13 +105,45 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: 'Update user profile' })
+  @ApiBody({
+    type: UpdateUserDto,
+    examples: {
+      all: {
+        value: {
+          fullName: 'Updated User Name',
+          phoneNumber: '1234567890',
+          address: '123 Updated Street',
+          dob: '1990-01-01',
+        },
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Put('profile')
   async updateProfile(@User() user: any, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(user.id, updateUserDto);
+    console.log('PUT /users/profile');
+    return this.usersService.updateProfile(user.id, updateUserDto);
   }
 
   @ApiOperation({ summary: 'Update a user by ID' })
+  @ApiBody({
+    type: UpdateUserDto,
+    examples: {
+      admin: {
+        value: {
+          fullName: 'Updated Admin Name',
+        },
+      },
+      intern: {
+        value: {
+          fullName: 'Updated Intern Name',
+          internInformation: {
+            field: 'Updated Field',
+          },
+        },
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Put(':id')
