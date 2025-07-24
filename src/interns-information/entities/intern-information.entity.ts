@@ -1,4 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { User } from 'src/users/entities/user.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity('interns_information')
 export class InternInformation {
@@ -10,6 +17,11 @@ export class InternInformation {
 
   @Column({ unique: true })
   internId: string;
+
+  // Relationship với User entity
+  @OneToOne(() => User, (user) => user.internInformation)
+  @JoinColumn({ name: 'internId' })
+  intern: User;
 
   @Column({ nullable: true })
   mentorId: string;
