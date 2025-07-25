@@ -30,13 +30,7 @@ export class InternsInformationController {
   @Roles('admin')
   @Get()
   async findAll() {
-    try {
-      return await this.internsInformationService.findAll();
-    } catch (error) {
-      throw new InternalServerErrorException(
-        'Error fetching intern information: ' + error.message,
-      );
-    }
+    return await this.internsInformationService.findAll();
   }
 
   @ApiOperation({ summary: 'Get intern information by ID' })
@@ -44,21 +38,7 @@ export class InternsInformationController {
   @Roles('admin') // Not sure
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    try {
-      const internInfo = await this.internsInformationService.findOne(id);
-      if (!internInfo) {
-        throw new NotFoundException('Intern information not found');
-      }
-      return internInfo;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        'Error fetching intern information: ' + error.message,
-      );
-    }
+    return await this.internsInformationService.findOne(id);
   }
 
   @ApiOperation({ summary: 'Update intern status by ID' })
@@ -66,17 +46,7 @@ export class InternsInformationController {
   @Roles('admin')
   @Put(':id/status')
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    try {
-      return await this.internsInformationService.updateStatus(id, status);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        'Error updating intern status: ' + error.message,
-      );
-    }
+    return await this.internsInformationService.updateStatus(id, status);
   }
 
   @ApiOperation({ summary: 'Update intern training plan by ID' })
@@ -88,33 +58,7 @@ export class InternsInformationController {
     @Body('planId') planId: string,
     @User() user: any,
   ) {
-    try {
-      const updatedInternInfo = await this.internsInformationService.updatePlan(
-        id,
-        planId,
-        user,
-      );
-
-      if (!updatedInternInfo) {
-        throw new ForbiddenException(
-          'You do not have permission to update this intern information',
-        );
-      }
-
-      return updatedInternInfo;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      if (error instanceof ForbiddenException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        'Error updating intern plan: ' + error.message,
-      );
-    }
+    return await this.internsInformationService.updatePlan(id, planId, user);
   }
 
   @ApiOperation({ summary: 'Update intern mentor by ID' })
@@ -125,17 +69,7 @@ export class InternsInformationController {
     @Param('id') id: string,
     @Body('mentorId') mentorId: string,
   ) {
-    try {
-      return await this.internsInformationService.updateMentor(id, mentorId);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        'Error updating intern mentor: ' + error.message,
-      );
-    }
+    return await this.internsInformationService.updateMentor(id, mentorId);
   }
 
   @ApiOperation({ summary: 'Update intern information by ID' })
@@ -146,16 +80,6 @@ export class InternsInformationController {
     @Param('id') id: string,
     @Body() updateData: UpdateInternInformationDto,
   ) {
-    try {
-      return await this.internsInformationService.update(id, updateData);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        'Error updating intern information: ' + error.message,
-      );
-    }
+    return await this.internsInformationService.update(id, updateData);
   }
 }

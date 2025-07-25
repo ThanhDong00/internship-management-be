@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from './entities/task.entity';
 import { Repository } from 'typeorm';
@@ -15,38 +19,71 @@ export class TasksService {
   ) {}
 
   async create(task: CreateTaskDto, user: SimpleUserDto): Promise<Task> {
-    const newTask = this.taskRepository.create({ ...task, createdBy: user.id });
-    return await this.taskRepository.save(newTask);
+    try {
+      const newTask = this.taskRepository.create({
+        ...task,
+        createdBy: user.id,
+      });
+      return await this.taskRepository.save(newTask);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error creating task: ' + error.message,
+      );
+    }
   }
 
   async findAll(user: SimpleUserDto): Promise<Task[]> {
-    return await this.taskRepository.find({
-      where: { isDeleted: false, createdBy: user.id },
-    });
+    try {
+      return await this.taskRepository.find({
+        where: { isDeleted: false, createdBy: user.id },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error fetching tasks: ' + error.message,
+      );
+    }
   }
 
-  async findOne(id: string, user: SimpleUserDto): Promise<TaskDto | null> {
-    const task = await this.taskRepository.findOne({
-      where: { id, isDeleted: false, createdBy: user.id },
-      relations: ['creator'],
-    });
+  async findOne(id: string, user: SimpleUserDto): Promise<TaskDto> {
+    try {
+      const task = await this.taskRepository.findOne({
+        where: { id, isDeleted: false, createdBy: user.id },
+        relations: ['creator'],
+      });
 
-    if (!task) return null;
+      if (!task) throw new NotFoundException('Task not found');
 
-    return plainToInstance(TaskDto, task, {
-      excludeExtraneousValues: true,
-    });
+      return plainToInstance(TaskDto, task, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error fetching task: ' + error.message,
+      );
+    }
   }
 
   async update(
     id: string,
     updateData: UpdateTaskDto,
     user: SimpleUserDto,
-  ): Promise<Task | null> {
-    const task = await this.findOne(id, user);
-    if (!task) return null;
+  ): Promise<Task> {
+    try {
+      const task = await this.findOne(id, user);
+      if (!task) throw new NotFoundException('Task not found');
 
-    Object.assign(task, updateData);
-    return await this.taskRepository.save(task);
+      Object.assign(task, updateData);
+      return await this.taskRepository.save(task);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Error updating task');
+    }
   }
 }

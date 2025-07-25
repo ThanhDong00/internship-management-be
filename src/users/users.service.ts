@@ -108,19 +108,25 @@ export class UsersService {
   }
 
   async findOne(id: string): Promise<UserDto> {
-    const user = await this.usersRepository.findOne({
-      where: {
-        id: id,
-        isDeleted: false,
-      },
-      relations: ['internInformation'],
-    });
+    try {
+      const user = await this.usersRepository.findOne({
+        where: {
+          id: id,
+          isDeleted: false,
+        },
+        relations: ['internInformation'],
+      });
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      return plainToInstance(UserDto, user);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error fetching user: ' + error.message,
+      );
     }
-
-    return plainToInstance(UserDto, user);
   }
 
   async findByUsername(username: string): Promise<User> {
