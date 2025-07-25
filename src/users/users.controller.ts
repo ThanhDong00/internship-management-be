@@ -89,10 +89,6 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@User() user: any) {
-    if (!user) {
-      throw new UnauthorizedException();
-    }
-
     return this.usersService.findOne(user.id);
   }
 
@@ -121,7 +117,6 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Put('profile')
   async updateProfile(@User() user: any, @Body() updateUserDto: UpdateUserDto) {
-    console.log('PUT /users/profile');
     return this.usersService.updateProfile(user.id, updateUserDto);
   }
 

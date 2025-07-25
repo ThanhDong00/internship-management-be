@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,7 +13,6 @@ import { CreateTrainingPlanDto } from './dto/create-training-plan.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 import { Skill } from 'src/skills/entities/skill.entity';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
-import e from 'express';
 
 @Injectable()
 export class TrainingPlansService {
@@ -27,91 +27,127 @@ export class TrainingPlansService {
   ) {}
 
   async findAll(): Promise<TrainingPlan[]> {
-    const trainingPlans = await this.trainingPlanRepository.find({
-      where: {
-        isDeleted: false,
-      },
-      relations: ['skills', 'skills.skill'],
-    });
+    try {
+      const trainingPlans = await this.trainingPlanRepository.find({
+        where: {
+          isDeleted: false,
+        },
+        relations: ['skills', 'skills.skill'],
+      });
 
-    return trainingPlans;
+      return trainingPlans;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error fetching training plans: ' + error.message,
+      );
+    }
   }
 
   async findAllByUser(userId: string): Promise<TrainingPlan[]> {
-    const trainingPlans = await this.trainingPlanRepository.find({
-      where: {
-        isDeleted: false,
-        createdBy: userId,
-      },
-      relations: ['skills', 'skills.skill'],
-    });
+    try {
+      const trainingPlans = await this.trainingPlanRepository.find({
+        where: {
+          isDeleted: false,
+          createdBy: userId,
+        },
+        relations: ['skills', 'skills.skill'],
+      });
 
-    return trainingPlans;
+      return trainingPlans;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error fetching training plans: ' + error.message,
+      );
+    }
   }
 
-  async findOne(id: string, user: SimpleUserDto): Promise<TrainingPlan | null> {
-    const trainingPlan = await this.trainingPlanRepository.findOne({
-      where: {
-        id,
-        isDeleted: false,
-      },
-      relations: ['skills', 'skills.skill'],
-    });
+  async findOne(id: string, user: SimpleUserDto): Promise<TrainingPlan> {
+    try {
+      const trainingPlan = await this.trainingPlanRepository.findOne({
+        where: {
+          id,
+          isDeleted: false,
+        },
+        relations: ['skills', 'skills.skill'],
+      });
 
-    if (!trainingPlan) {
-      return null;
-    }
+      if (!trainingPlan) {
+        throw new NotFoundException(`Training plan ${id} not found`);
+      }
 
-    if (user.role === 'admin' || trainingPlan.createdBy === user.id) {
+      if (user.role !== 'admin' && user.id !== trainingPlan.createdBy) {
+        throw new ForbiddenException(
+          'You do not have permission to access this training plan',
+        );
+      }
+
       return trainingPlan;
-    }
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
 
-    return null;
+      throw new InternalServerErrorException(
+        'Error fetching training plan: ' + error.message,
+      );
+    }
   }
 
   async createTrainingPlan(
     createTrainingPlanDto: CreateTrainingPlanDto,
     user: SimpleUserDto,
   ): Promise<TrainingPlan> {
-    const { skills, ...createData } = createTrainingPlanDto;
-
-    if (skills && skills.length > 0) {
-      await this.validateSkillsExist(skills);
-    }
-
-    return await this.dataSource.transaction(async (manager) => {
-      const trainingPlan = manager.create(TrainingPlan, {
-        ...createData,
-        createdBy: user.id,
-      });
-
-      const savedTrainingPlan = await manager.save(TrainingPlan, trainingPlan);
+    try {
+      const { skills, ...createData } = createTrainingPlanDto;
 
       if (skills && skills.length > 0) {
-        const trainingPlanSkills = skills.map((skillId) =>
-          manager.create(TrainingPlanSkill, {
-            planId: savedTrainingPlan.id,
-            skillId: skillId,
-          }),
+        await this.validateSkillsExist(skills);
+      }
+
+      return await this.dataSource.transaction(async (manager) => {
+        const trainingPlan = manager.create(TrainingPlan, {
+          ...createData,
+          createdBy: user.id,
+        });
+
+        const savedTrainingPlan = await manager.save(
+          TrainingPlan,
+          trainingPlan,
         );
 
-        await manager.save(TrainingPlanSkill, trainingPlanSkills);
-      }
+        if (skills && skills.length > 0) {
+          const trainingPlanSkills = skills.map((skillId) =>
+            manager.create(TrainingPlanSkill, {
+              planId: savedTrainingPlan.id,
+              skillId: skillId,
+            }),
+          );
 
-      const trainingPlanWithSkills = await manager.findOne(TrainingPlan, {
-        where: {
-          id: savedTrainingPlan.id,
-          isDeleted: false,
-        },
-        relations: ['skills', 'skills.skill'],
+          await manager.save(TrainingPlanSkill, trainingPlanSkills);
+        }
+
+        const trainingPlanWithSkills = await manager.findOne(TrainingPlan, {
+          where: {
+            id: savedTrainingPlan.id,
+            isDeleted: false,
+          },
+          relations: ['skills', 'skills.skill'],
+        });
+
+        if (!trainingPlanWithSkills) {
+          throw new Error('Failed to create training plan with skills');
+        }
+
+        return trainingPlanWithSkills;
       });
-
-      if (!trainingPlanWithSkills) {
-        throw new Error('Failed to create training plan with skills');
-      }
-
-      return trainingPlanWithSkills;
-    });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error creating training plan: ' + error.message,
+      );
+    }
   }
 
   private async validateSkillsExist(skills: string[]) {
@@ -137,55 +173,74 @@ export class TrainingPlansService {
     updateData: UpdateTrainingPlanDto,
     user: SimpleUserDto,
   ): Promise<TrainingPlan> {
-    const existingTrainingPlan = await this.findOne(id, user);
+    try {
+      const existingTrainingPlan = await this.findOne(id, user);
 
-    if (!existingTrainingPlan) {
-      throw new NotFoundException(`Training plan ${id} not found`);
-    }
+      if (!existingTrainingPlan) {
+        throw new NotFoundException(`Training plan ${id} not found`);
+      }
 
-    if (user.role === 'mentor' && existingTrainingPlan.createdBy !== user.id) {
-      throw new ForbiddenException(
-        'You do not have permission to update this training plan',
-      );
-    }
+      if (
+        user.role === 'mentor' &&
+        existingTrainingPlan.createdBy !== user.id
+      ) {
+        throw new ForbiddenException(
+          'You do not have permission to update this training plan',
+        );
+      }
 
-    const { skills, ...updatePlanData } = updateData;
+      const { skills, ...updatePlanData } = updateData;
 
-    if (skills && skills.length > 0) {
-      await this.validateSkillsExist(skills);
-    }
+      if (skills && skills.length > 0) {
+        await this.validateSkillsExist(skills);
+      }
 
-    const updatedTrainingPlanId = await this.dataSource.transaction(
-      async (manager) => {
-        Object.assign(existingTrainingPlan, updatePlanData);
-        await manager.save(TrainingPlan, existingTrainingPlan);
+      const updatedTrainingPlanId = await this.dataSource.transaction(
+        async (manager) => {
+          Object.assign(existingTrainingPlan, updatePlanData);
+          await manager.save(TrainingPlan, existingTrainingPlan);
 
-        if (skills && skills.length > 0) {
-          await manager.delete(TrainingPlanSkill, {
-            planId: existingTrainingPlan.id,
-          });
-
-          const trainingPlanSkills = skills.map((skillId) =>
-            manager.create(TrainingPlanSkill, {
+          if (skills && skills.length > 0) {
+            await manager.delete(TrainingPlanSkill, {
               planId: existingTrainingPlan.id,
-              skillId: skillId,
-            }),
-          );
-          await manager.save(TrainingPlanSkill, trainingPlanSkills);
-        }
+            });
 
-        return existingTrainingPlan.id;
-      },
-    );
+            const trainingPlanSkills = skills.map((skillId) =>
+              manager.create(TrainingPlanSkill, {
+                planId: existingTrainingPlan.id,
+                skillId: skillId,
+              }),
+            );
+            await manager.save(TrainingPlanSkill, trainingPlanSkills);
+          }
 
-    const updatedTrainingPlan = await this.findOne(updatedTrainingPlanId, user);
+          return existingTrainingPlan.id;
+        },
+      );
 
-    if (!updatedTrainingPlan) {
-      throw new NotFoundException(
-        `Error when updating: Training plan ${updatedTrainingPlanId} not found`,
+      const updatedTrainingPlan = await this.findOne(
+        updatedTrainingPlanId,
+        user,
+      );
+
+      if (!updatedTrainingPlan) {
+        throw new NotFoundException(
+          `Error when updating: Training plan ${updatedTrainingPlanId} not found`,
+        );
+      }
+
+      return updatedTrainingPlan;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error updating training plan: ' + error.message,
       );
     }
-
-    return updatedTrainingPlan;
   }
 }

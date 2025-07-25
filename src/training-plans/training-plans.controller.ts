@@ -34,14 +34,10 @@ export class TrainingPlansController {
     @Body() createTrainingPlanDto: CreateTrainingPlanDto,
     @User() user: SimpleUserDto,
   ) {
-    try {
-      return this.trainingPlansService.createTrainingPlan(
-        createTrainingPlanDto,
-        user,
-      );
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to create training plan');
-    }
+    return this.trainingPlansService.createTrainingPlan(
+      createTrainingPlanDto,
+      user,
+    );
   }
 
   @ApiOperation({
@@ -67,23 +63,7 @@ export class TrainingPlansController {
   @Roles('admin', 'mentor')
   @Get(':id')
   async findOne(@Param('id') id: string, @User() user: SimpleUserDto) {
-    try {
-      const trainingPlan = await this.trainingPlansService.findOne(id, user);
-
-      if (!trainingPlan) {
-        throw new NotFoundException('Training plan not found');
-      }
-
-      return trainingPlan;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        'Failed to retrieve training plan',
-      );
-    }
+    return await this.trainingPlansService.findOne(id, user);
   }
 
   @ApiOperation({ summary: 'Update a training plan by ID' })
@@ -95,10 +75,6 @@ export class TrainingPlansController {
     @Body() updateTrainingPlanDto: UpdateTrainingPlanDto,
     @User() user: SimpleUserDto,
   ) {
-    try {
-      return this.trainingPlansService.update(id, updateTrainingPlanDto, user);
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to update training plan');
-    }
+    return this.trainingPlansService.update(id, updateTrainingPlanDto, user);
   }
 }

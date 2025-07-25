@@ -33,11 +33,7 @@ export class TasksController {
     @Body() createTaskDto: CreateTaskDto,
     @User() user: SimpleUserDto,
   ) {
-    try {
-      return await this.tasksService.create(createTaskDto, user);
-    } catch (error) {
-      throw new InternalServerErrorException('Error creating task');
-    }
+    return await this.tasksService.create(createTaskDto, user);
   }
 
   @ApiOperation({ summary: 'Get all tasks' })
@@ -45,11 +41,7 @@ export class TasksController {
   @Roles('admin', 'mentor')
   @Get()
   async findAll(@User() user: SimpleUserDto) {
-    try {
-      return await this.tasksService.findAll(user);
-    } catch (error) {
-      throw new InternalServerErrorException('Error fetching tasks');
-    }
+    return await this.tasksService.findAll(user);
   }
 
   @ApiOperation({ summary: 'Get a task by ID' })
@@ -57,21 +49,7 @@ export class TasksController {
   @Roles('admin', 'mentor')
   @Get(':id')
   async findOne(@Param('id') id: string, @User() user: SimpleUserDto) {
-    try {
-      const task = await this.tasksService.findOne(id, user);
-
-      if (!task) {
-        throw new NotFoundException('Task not found');
-      }
-
-      return task;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException('Error fetching task');
-    }
+    return await this.tasksService.findOne(id, user);
   }
 
   @ApiOperation({ summary: 'Update a task by ID' })
@@ -83,24 +61,6 @@ export class TasksController {
     @Body() updateTaskDto: UpdateTaskDto,
     @User() user: SimpleUserDto,
   ) {
-    try {
-      const updatedTask = await this.tasksService.update(
-        id,
-        updateTaskDto,
-        user,
-      );
-
-      if (!updatedTask) {
-        throw new NotFoundException('Task not found');
-      }
-
-      return updatedTask;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException('Error updating task');
-    }
+    return await this.tasksService.update(id, updateTaskDto, user);
   }
 }

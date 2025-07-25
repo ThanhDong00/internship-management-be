@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InternInformation } from './entities/intern-information.entity';
 import { Repository } from 'typeorm';
@@ -22,25 +27,45 @@ export class InternsInformationService {
   }
 
   async findAll(): Promise<InternInformationDto[]> {
-    const internInfos = await this.internInfoRepo.find({
-      where: { isDeleted: false },
-    });
-    return internInfos.map((info) =>
-      plainToInstance(InternInformationDto, info, {
+    try {
+      const internInfos = await this.internInfoRepo.find({
+        where: { isDeleted: false },
+      });
+      return plainToInstance(InternInformationDto, internInfos, {
         excludeExtraneousValues: true,
-      }),
-    );
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error fetching intern information',
+      );
+    }
   }
 
   async findOne(id: string): Promise<InternInformationDto | null> {
-    const internInfo = await this.internInfoRepo.findOne({
-      where: {
-        id: id,
-        isDeleted: false,
-      },
-    });
+    try {
+      const internInfo = await this.internInfoRepo.findOne({
+        where: {
+          id: id,
+          isDeleted: false,
+        },
+      });
 
-    return internInfo;
+      if (!internInfo) {
+        throw new NotFoundException('Intern information not found');
+      }
+
+      return plainToInstance(InternInformationDto, internInfo, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error fetching intern information: ' + error.message,
+      );
+    }
   }
 
   async findByInternId(internId: string): Promise<InternInformation | null> {
@@ -56,20 +81,30 @@ export class InternsInformationService {
     id: string,
     status: string,
   ): Promise<InternInformationDto> {
-    const internInfo = await this.internInfoRepo.findOne({
-      where: { id: id, isDeleted: false },
-    });
+    try {
+      const internInfo = await this.internInfoRepo.findOne({
+        where: { id: id, isDeleted: false },
+      });
 
-    if (!internInfo) {
-      throw new NotFoundException('Intern information not found');
+      if (!internInfo) {
+        throw new NotFoundException('Intern information not found');
+      }
+
+      internInfo.status = status;
+      await this.internInfoRepo.save(internInfo);
+
+      return plainToInstance(InternInformationDto, internInfo, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error updating intern status: ' + error.message,
+      );
     }
-
-    internInfo.status = status;
-    await this.internInfoRepo.save(internInfo);
-
-    return plainToInstance(InternInformationDto, internInfo, {
-      excludeExtraneousValues: true,
-    });
   }
 
   async updatePlan(
@@ -77,63 +112,98 @@ export class InternsInformationService {
     planId: string,
     user: any,
   ): Promise<InternInformationDto | null> {
-    const internInfo = await this.internInfoRepo.findOne({
-      where: { id: id, isDeleted: false },
-    });
+    try {
+      const internInfo = await this.internInfoRepo.findOne({
+        where: { id: id, isDeleted: false },
+      });
 
-    if (!internInfo) {
-      throw new NotFoundException('Intern information not found');
-    }
+      if (!internInfo) {
+        throw new NotFoundException('Intern information not found');
+      }
 
-    if (user.role === 'admin' || internInfo?.mentorId === user.id) {
+      if (user.role === 'mentor' && internInfo?.mentorId !== user.id) {
+        throw new ForbiddenException(
+          'You do not have permission to update this intern information',
+        );
+      }
+
       internInfo.planId = planId;
       await this.internInfoRepo.save(internInfo);
 
       return plainToInstance(InternInformationDto, internInfo, {
         excludeExtraneousValues: true,
       });
-    }
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
 
-    return null;
+      throw new InternalServerErrorException(
+        'Error updating intern plan: ' + error.message,
+      );
+    }
   }
 
   async updateMentor(
     id: string,
     mentorId: string,
   ): Promise<InternInformationDto> {
-    const internInfo = await this.internInfoRepo.findOne({
-      where: { id: id, isDeleted: false },
-    });
+    try {
+      const internInfo = await this.internInfoRepo.findOne({
+        where: { id: id, isDeleted: false },
+      });
 
-    if (!internInfo) {
-      throw new NotFoundException('Intern information not found');
+      if (!internInfo) {
+        throw new NotFoundException('Intern information not found');
+      }
+
+      internInfo.mentorId = mentorId;
+      await this.internInfoRepo.save(internInfo);
+
+      return plainToInstance(InternInformationDto, internInfo, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error updating intern mentor: ' + error.message,
+      );
     }
-
-    internInfo.mentorId = mentorId;
-    await this.internInfoRepo.save(internInfo);
-
-    return plainToInstance(InternInformationDto, internInfo, {
-      excludeExtraneousValues: true,
-    });
   }
 
   async update(
     id: string,
     updateData: UpdateInternInformationDto,
   ): Promise<InternInformationDto> {
-    const internInfo = await this.internInfoRepo.findOne({
-      where: { id: id, isDeleted: false },
-    });
+    try {
+      const internInfo = await this.internInfoRepo.findOne({
+        where: { id: id, isDeleted: false },
+      });
 
-    if (!internInfo) {
-      throw new NotFoundException('Intern information not found');
+      if (!internInfo) {
+        throw new NotFoundException('Intern information not found');
+      }
+
+      Object.assign(internInfo, updateData);
+      await this.internInfoRepo.save(internInfo);
+
+      return plainToInstance(InternInformationDto, internInfo, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error updating intern information: ' + error.message,
+      );
     }
-
-    Object.assign(internInfo, updateData);
-    await this.internInfoRepo.save(internInfo);
-
-    return plainToInstance(InternInformationDto, internInfo, {
-      excludeExtraneousValues: true,
-    });
   }
 }

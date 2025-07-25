@@ -7,8 +7,6 @@ import {
   Param,
   Delete,
   UseGuards,
-  NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { SkillsService } from './skills.service';
 import { CreateSkillDto } from './dto/create-skill.dto';
@@ -42,7 +40,8 @@ export class SkillsController {
   }
 
   @ApiOperation({ summary: 'Get all skills for a user' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
   @Get()
   async findAllByUserId(@User() user: any) {
     return await this.skillsService.findAllByUserId(user.id);
@@ -53,13 +52,7 @@ export class SkillsController {
   @Roles('admin', 'mentor')
   @Get(':id')
   async findOne(@Param('id') id: string, @User() user: any) {
-    const skill = await this.skillsService.findOne(id, user);
-    if (!skill) {
-      throw new NotFoundException(
-        `Skill with ID ${id} not found or you do not have permission to view it`,
-      );
-    }
-    return skill;
+    return await this.skillsService.findOne(id, user);
   }
 
   @ApiOperation({ summary: 'Update a skill by ID' })
@@ -71,17 +64,7 @@ export class SkillsController {
     @Body() updateSkillDto: UpdateSkillDto,
     @User() user: any,
   ) {
-    const updatedSkill = await this.skillsService.update(
-      id,
-      updateSkillDto,
-      user,
-    );
-    if (!updatedSkill) {
-      throw new UnauthorizedException(
-        `You are not the owner of this skill or the admin`,
-      );
-    }
-    return updatedSkill;
+    return await this.skillsService.update(id, updateSkillDto, user);
   }
 
   @ApiOperation({ summary: 'Delete a skill by ID, not implemented' })
