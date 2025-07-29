@@ -17,15 +17,22 @@ import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { AssignmentSkill } from 'src/assignments/entities/assignment-skill.entity';
 import { TrainingPlanDto } from './dto/training-plan.dto';
 import { plainToInstance } from 'class-transformer';
+import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
+import { InternsInformationService } from 'src/interns-information/interns-information.service';
 
 @Injectable()
 export class TrainingPlansService {
   constructor(
     @InjectRepository(TrainingPlan)
     private readonly trainingPlanRepository: Repository<TrainingPlan>,
+
     @InjectRepository(Skill)
     private readonly skillRepository: Repository<Skill>,
 
+    @InjectRepository(InternInformation)
+    private readonly internInformationRepository: Repository<InternInformation>,
+
+    private readonly internsInformationService: InternsInformationService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -322,6 +329,67 @@ export class TrainingPlansService {
       throw new InternalServerErrorException(
         'Error updating training plan: ' + error.message,
       );
+    }
+  }
+
+  async assignTrainingPlanToIntern(
+    id: string,
+    internId: string,
+    user: SimpleUserDto,
+  ) {
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        const trainingPlan = await manager.findOne(TrainingPlan, {
+          where: {
+            id: id,
+            isDeleted: false,
+          },
+        });
+
+        if (!trainingPlan) {
+          throw new NotFoundException(`Training plan ${id} not found`);
+        }
+
+        if (user.role !== 'admin' && user.id !== trainingPlan.createdBy) {
+          throw new ForbiddenException(
+            'You do not have permission to assign this training plan',
+          );
+        }
+
+        const internsInfo =
+          await this.internsInformationService.findByInternId(internId);
+
+        if (!internsInfo) {
+          throw new NotFoundException(`Intern ${internId} not found`);
+        }
+
+        internsInfo.planId = id;
+        await manager.save(InternInformation, internsInfo);
+
+        // change Assignment's assignedTo to the internId
+        const assignmentsToUpdate = await manager.find(Assignment, {
+          where: {
+            planId: id,
+          },
+        });
+
+        for (const assignment of assignmentsToUpdate) {
+          assignment.assignedTo = internId;
+          assignment.dueDate = internsInfo.endDate;
+          await manager.save(Assignment, assignment);
+        }
+      });
+
+      return { message: 'Training plan assigned to intern successfully' };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Error assigning training plan');
     }
   }
 }
