@@ -1,5 +1,12 @@
 import { Task } from 'src/tasks/entities/task.entity';
-import { Column, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { AssignmentSkill } from './assignment-skill.entity';
 
 export class Assignment {
   @PrimaryGeneratedColumn('uuid')
@@ -15,8 +22,14 @@ export class Assignment {
   @JoinColumn({ name: 'taskId' })
   task: Task;
 
-  @Column({ nullable: false })
-  skillId: string;
+  @OneToMany(
+    () => AssignmentSkill,
+    (assignmentSkill) => assignmentSkill.assignment,
+    {
+      cascade: true,
+    },
+  )
+  skills: AssignmentSkill[];
 
   @Column({ nullable: false })
   createdBy: string;

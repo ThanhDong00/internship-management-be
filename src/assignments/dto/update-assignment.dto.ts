@@ -6,4 +6,5 @@ export class UpdateAssignmentDto {
   dueDate?: Date;
   estimatedTime?: number;
   status?: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed';
+  skillIds?: string[];
 }
