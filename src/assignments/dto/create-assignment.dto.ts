@@ -10,7 +10,7 @@ export class CreateAssignmentDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsUUID('4', { message: 'Invalid skillId format' })
-  skillId: string;
+  skillIds: string[];
 
   @ApiProperty()
   @IsNotEmpty()

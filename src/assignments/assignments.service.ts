@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -12,37 +13,61 @@ import { AssignmentDto } from './dto/assignment.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 import { plainToInstance } from 'class-transformer';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
+import { AssignmentSkill } from './entities/assignment-skill.entity';
+import { Skill } from 'src/skills/entities/skill.entity';
 
 @Injectable()
 export class AssignmentsService {
   constructor(
     @InjectRepository(Assignment)
     private readonly assignmentRepository: Repository<Assignment>,
+
+    @InjectRepository(AssignmentSkill)
+    private readonly assignmentSkillRepository: Repository<AssignmentSkill>,
+
+    @InjectRepository(Skill)
+    private readonly skillRepository: Repository<Skill>,
   ) {}
 
   async create(
     createAssignmentDto: CreateAssignmentDto,
     user: SimpleUserDto,
   ): Promise<AssignmentDto> {
-    if (user.role === 'intern') {
-      throw new ForbiddenException(
-        'You do not have permission to create assignments',
-      );
-    }
-
     try {
+      const { skillIds, ...assignmentData } = createAssignmentDto;
+
+      if (!skillIds || skillIds.length === 0) {
+        throw new BadRequestException('At least one skill is required');
+      }
+
+      // Check if all skills exist
+      //...
+
+      // Create assignment
       const assignment = this.assignmentRepository.create({
-        ...createAssignmentDto,
+        ...assignmentData,
         createdBy: user.id,
       });
-
       const savedAssignment = await this.assignmentRepository.save(assignment);
 
-      return plainToInstance(AssignmentDto, savedAssignment, {
+      // Create assignment skills
+      const assignmentSkills = skillIds.map((skillId) =>
+        this.assignmentSkillRepository.create({
+          assignmentId: savedAssignment.id,
+          skillId: skillId,
+        }),
+      );
+      await this.assignmentSkillRepository.save(assignmentSkills);
+
+      const createdAssignment = await this.findOneById(savedAssignment.id);
+      return plainToInstance(AssignmentDto, createdAssignment, {
         excludeExtraneousValues: true,
       });
     } catch (error) {
-      if (error instanceof ForbiddenException) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
 
@@ -51,6 +76,19 @@ export class AssignmentsService {
         error.message,
       );
     }
+  }
+
+  private async findOneById(id: string): Promise<Assignment> {
+    const assignment = await this.assignmentRepository.findOne({
+      where: { id, isDeleted: false },
+      relations: ['skills', 'skills.skill', 'task'],
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    return assignment;
   }
 
   async findAll(user: SimpleUserDto): Promise<AssignmentDto[]> {
@@ -67,6 +105,7 @@ export class AssignmentsService {
 
       const assignments = await this.assignmentRepository.find({
         where: whereCondition,
+        relations: ['skills', 'skills.skill', 'task'],
       });
 
       return plainToInstance(AssignmentDto, assignments, {
@@ -95,6 +134,7 @@ export class AssignmentsService {
 
       const assignment = await this.assignmentRepository.findOne({
         where: whereCondition,
+        relations: ['skills', 'skills.skill', 'task'],
       });
 
       if (!assignment) {
@@ -247,26 +287,53 @@ export class AssignmentsService {
         isDeleted: false,
       };
 
-      if (user.role === 'mentor') {
-        whereCondition.createdBy = user.id;
-      }
-
       const assignment = await this.assignmentRepository.findOne({
         where: whereCondition,
+        relations: ['skills'],
       });
 
       if (!assignment) {
         throw new NotFoundException('Assignment not found');
       }
 
-      Object.assign(assignment, updateAssignmentDto);
-      await this.assignmentRepository.save(assignment);
+      if (user.role !== 'admin' && assignment.createdBy !== user.id) {
+        throw new ForbiddenException(
+          'You can only update your own assignments',
+        );
+      }
 
-      return plainToInstance(AssignmentDto, assignment, {
+      const { skillIds, ...assignmentData } = updateAssignmentDto;
+
+      await this.assignmentRepository.update(id, assignmentData);
+
+      // delete old skill, create new skill
+      if (skillIds && skillIds.length > 0) {
+        // check if skill exist
+        // ...
+
+        await this.assignmentSkillRepository.delete({
+          assignmentId: id,
+        });
+
+        const newAssignmentSkills = skillIds.map((skillId) =>
+          this.assignmentSkillRepository.create({
+            assignmentId: id,
+            skillId: skillId,
+          }),
+        );
+        await this.assignmentSkillRepository.save(newAssignmentSkills);
+      }
+
+      const updatedAssignment = await this.findOneById(id);
+
+      return plainToInstance(AssignmentDto, updatedAssignment, {
         excludeExtraneousValues: true,
       });
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
 
