@@ -1,6 +1,7 @@
 import { Task } from 'src/tasks/entities/task.entity';
 import {
   Column,
+  Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -8,6 +9,7 @@ import {
 } from 'typeorm';
 import { AssignmentSkill } from './assignment-skill.entity';
 
+@Entity()
 export class Assignment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
