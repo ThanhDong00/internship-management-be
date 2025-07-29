@@ -17,11 +17,14 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('assignments')
 @Controller('assignments')
 export class AssignmentsController {
   constructor(private readonly assignmentsService: AssignmentsService) {}
 
+  @ApiOperation({ summary: 'Create a new assignment' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Post()
@@ -32,18 +35,21 @@ export class AssignmentsController {
     return this.assignmentsService.create(payLoad, user);
   }
 
+  @ApiOperation({ summary: 'Get all assignments' })
   @UseGuards(JwtAuthGuard)
   @Get()
   async findAll(@User() user: SimpleUserDto) {
     return this.assignmentsService.findAll(user);
   }
 
+  @ApiOperation({ summary: 'Get a single assignment by ID' })
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   async findOne(@Param('id') id: string, @User() user: SimpleUserDto) {
     return this.assignmentsService.findOne(id, user);
   }
 
+  @ApiOperation({ summary: 'Update assignment status' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('intern')
   @Patch(':id/status')
@@ -51,6 +57,7 @@ export class AssignmentsController {
     return this.assignmentsService.updateStatus(id, user);
   }
 
+  @ApiOperation({ summary: 'Submit an assignment' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('intern')
   @Put(':id/submit')
@@ -62,6 +69,7 @@ export class AssignmentsController {
     return this.assignmentsService.submit(id, user, payLoad);
   }
 
+  @ApiOperation({ summary: 'Review an assignment' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('mentor')
   @Put(':id/review')
@@ -73,6 +81,7 @@ export class AssignmentsController {
     return this.assignmentsService.review(id, user, payLoad);
   }
 
+  @ApiOperation({ summary: 'Update an assignment' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Put(':id')
@@ -84,6 +93,7 @@ export class AssignmentsController {
     return this.assignmentsService.update(id, user, payLoad);
   }
 
+  @ApiOperation({ summary: 'Delete an assignment' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Delete(':id')

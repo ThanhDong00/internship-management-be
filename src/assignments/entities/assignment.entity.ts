@@ -42,16 +42,16 @@ export class Assignment {
   @Column()
   estimatedTime: number;
 
-  @Column()
+  @Column({ nullable: true, default: null })
   dueDate: Date;
 
-  @Column()
+  @Column({ nullable: true, default: null })
   submittedLink: string;
 
-  @Column()
+  @Column({ nullable: true, default: null })
   submittedAt: Date;
 
-  @Column()
+  @Column({ nullable: true, default: null })
   feedback: string;
 
   @Column({

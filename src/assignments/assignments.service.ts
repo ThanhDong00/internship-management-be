@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Assignment } from './entities/assignment.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { AssignmentDto } from './dto/assignment.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
@@ -27,6 +27,8 @@ export class AssignmentsService {
 
     @InjectRepository(Skill)
     private readonly skillRepository: Repository<Skill>,
+
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(
@@ -41,25 +43,32 @@ export class AssignmentsService {
       }
 
       // Check if all skills exist
-      //...
+      await this.validateSkillsExist(skillIds);
 
-      // Create assignment
-      const assignment = this.assignmentRepository.create({
-        ...assignmentData,
-        createdBy: user.id,
-      });
-      const savedAssignment = await this.assignmentRepository.save(assignment);
+      const createdAssignmentId = await this.dataSource.transaction(
+        async (manager) => {
+          // Create assignment
+          const assignment = manager.create(Assignment, {
+            ...assignmentData,
+            createdBy: user.id,
+          });
+          const savedAssignment = await manager.save(Assignment, assignment);
 
-      // Create assignment skills
-      const assignmentSkills = skillIds.map((skillId) =>
-        this.assignmentSkillRepository.create({
-          assignmentId: savedAssignment.id,
-          skillId: skillId,
-        }),
+          // Create assignment skills
+          const assignmentSkills = skillIds.map((skillId) =>
+            manager.create(AssignmentSkill, {
+              assignmentId: savedAssignment.id,
+              skillId: skillId,
+            }),
+          );
+          await manager.save(AssignmentSkill, assignmentSkills);
+
+          return savedAssignment.id;
+        },
       );
-      await this.assignmentSkillRepository.save(assignmentSkills);
 
-      const createdAssignment = await this.findOneById(savedAssignment.id);
+      const createdAssignment = await this.findOneById(createdAssignmentId);
+      console.log('Created Assignment:', createdAssignment);
       return plainToInstance(AssignmentDto, createdAssignment, {
         excludeExtraneousValues: true,
       });
@@ -74,6 +83,24 @@ export class AssignmentsService {
       throw new InternalServerErrorException(
         'Error creating assignment',
         error.message,
+      );
+    }
+  }
+
+  private async validateSkillsExist(skills: string[]) {
+    const existingSkills = await this.skillRepository.find({
+      where: skills.map((id) => ({ id, isDeleted: false })),
+      select: ['id'],
+    });
+
+    const existingSkillIds = existingSkills.map((skill) => skill.id);
+    const missingSkillIds = skills.filter(
+      (id) => !existingSkillIds.includes(id),
+    );
+
+    if (missingSkillIds.length > 0) {
+      throw new BadRequestException(
+        `Skills not found: ${missingSkillIds.join(', ')}`,
       );
     }
   }
@@ -141,9 +168,7 @@ export class AssignmentsService {
         throw new NotFoundException('Assignment not found');
       }
 
-      return plainToInstance(AssignmentDto, assignment, {
-        excludeExtraneousValues: true,
-      });
+      return plainToInstance(AssignmentDto, assignment);
     } catch (error) {
       throw new InternalServerErrorException(
         'Error fetching assignment',
@@ -282,13 +307,8 @@ export class AssignmentsService {
     updateAssignmentDto: UpdateAssignmentDto,
   ): Promise<AssignmentDto> {
     try {
-      const whereCondition: any = {
-        id: id,
-        isDeleted: false,
-      };
-
       const assignment = await this.assignmentRepository.findOne({
-        where: whereCondition,
+        where: { id: id, isDeleted: false },
         relations: ['skills'],
       });
 
@@ -304,25 +324,28 @@ export class AssignmentsService {
 
       const { skillIds, ...assignmentData } = updateAssignmentDto;
 
-      await this.assignmentRepository.update(id, assignmentData);
-
-      // delete old skill, create new skill
       if (skillIds && skillIds.length > 0) {
-        // check if skill exist
-        // ...
-
-        await this.assignmentSkillRepository.delete({
-          assignmentId: id,
-        });
-
-        const newAssignmentSkills = skillIds.map((skillId) =>
-          this.assignmentSkillRepository.create({
-            assignmentId: id,
-            skillId: skillId,
-          }),
-        );
-        await this.assignmentSkillRepository.save(newAssignmentSkills);
+        await this.validateSkillsExist(skillIds);
       }
+
+      await this.dataSource.transaction(async (manager) => {
+        await manager.update(Assignment, id, assignmentData);
+
+        // delete old skill, create new skill
+        if (skillIds && skillIds.length > 0) {
+          await manager.delete(AssignmentSkill, {
+            assignmentId: id,
+          });
+
+          const newAssignmentSkills = skillIds.map((skillId) =>
+            manager.create(AssignmentSkill, {
+              assignmentId: id,
+              skillId: skillId,
+            }),
+          );
+          await manager.save(AssignmentSkill, newAssignmentSkills);
+        }
+      });
 
       const updatedAssignment = await this.findOneById(id);
 

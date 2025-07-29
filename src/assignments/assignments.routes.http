@@ -1,0 +1,37 @@
+@token = {{login.response.body.data.access_token}}
+@id= 64b22a0c-a176-4e15-8f1d-254e081213f8
+
+@skillId1 = 2b19fc6e-d610-4893-bf78-a7c5868ac164
+@skillId2 = 941ed370-7c0e-432f-bbf4-b8ec289d0dd6
+
+###
+# @name login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "mentor1",
+  "password": "123456"
+}
+
+###
+# @name createAssigment
+POST http://localhost:3000/assignments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "planId": "35478c12-abea-4e7c-a60a-e6b308156ce9",
+  "skillIds": [
+    "{{skillId1}}",
+    "{{skillId2}}"
+  ], 
+  "taskId": "4e53ec4e-b067-4964-9a7e-8720081bb1e7",
+  "estimatedTime": "2"
+}
+
+###
+# @name findOneAssignment
+GET http://localhost:3000/assignments/{{id}}
+Content-Type: application/json
+Authorization: Bearer {{token}}

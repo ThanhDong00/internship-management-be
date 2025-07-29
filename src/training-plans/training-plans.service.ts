@@ -13,6 +13,7 @@ import { CreateTrainingPlanDto } from './dto/create-training-plan.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 import { Skill } from 'src/skills/entities/skill.entity';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
+import { AssignmentsService } from 'src/assignments/assignments.service';
 
 @Injectable()
 export class TrainingPlansService {
@@ -23,7 +24,9 @@ export class TrainingPlansService {
     private readonly trainingPlanSkillRepository: Repository<TrainingPlanSkill>,
     @InjectRepository(Skill)
     private readonly skillRepository: Repository<Skill>,
+
     private readonly dataSource: DataSource,
+    private readonly assignmentsService: AssignmentsService,
   ) {}
 
   async findAll(): Promise<TrainingPlan[]> {
@@ -101,10 +104,14 @@ export class TrainingPlansService {
     user: SimpleUserDto,
   ): Promise<TrainingPlan> {
     try {
-      const { skills, ...createData } = createTrainingPlanDto;
+      const { assignments, skills, ...createData } = createTrainingPlanDto;
 
       if (skills && skills.length > 0) {
         await this.validateSkillsExist(skills);
+      }
+
+      if (assignments && assignments.length > 0) {
+        await this.validateAssignmentsData(assignments);
       }
 
       return await this.dataSource.transaction(async (manager) => {
@@ -129,6 +136,16 @@ export class TrainingPlansService {
           await manager.save(TrainingPlanSkill, trainingPlanSkills);
         }
 
+        if (assignments && assignments.length > 0) {
+          for (const assignmentDto of assignments) {
+            const assignmentWithPlanId = {
+              ...assignmentDto,
+              planId: savedTrainingPlan.id,
+            };
+            await this.assignmentsService.create(assignmentWithPlanId, user);
+          }
+        }
+
         const trainingPlanWithSkills = await manager.findOne(TrainingPlan, {
           where: {
             id: savedTrainingPlan.id,
@@ -144,6 +161,10 @@ export class TrainingPlansService {
         return trainingPlanWithSkills;
       });
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
       throw new InternalServerErrorException(
         'Error creating training plan: ' + error.message,
       );
@@ -165,6 +186,26 @@ export class TrainingPlansService {
       throw new BadRequestException(
         `Skills not found: ${missingSkillIds.join(', ')}`,
       );
+    }
+  }
+
+  private async validateAssignmentsData(assignments: any[]) {
+    for (const assignment of assignments) {
+      // Validate taskId exists
+      // You might want to add Task repository and check if task exists
+      if (!assignment.taskId) {
+        throw new BadRequestException('Task ID is required for assignment');
+      }
+
+      // Validate skills if provided
+      if (assignment.skillIds && assignment.skillIds.length > 0) {
+        await this.validateSkillsExist(assignment.skillIds);
+      }
+
+      // Validate estimatedTime is positive
+      if (assignment.estimatedTime <= 0) {
+        throw new BadRequestException('Estimated time must be greater than 0');
+      }
     }
   }
 

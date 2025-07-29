@@ -1,15 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsPositive,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateAssignmentDto {
   @ApiProperty()
-  @IsNotEmpty()
+  @IsOptional()
   @IsUUID('4', { message: 'Invalid planId format' })
   planId: string;
 
   @ApiProperty()
   @IsNotEmpty()
-  @IsUUID('4', { message: 'Invalid skillId format' })
   skillIds: string[];
 
   @ApiProperty()
@@ -19,6 +24,7 @@ export class CreateAssignmentDto {
 
   @ApiProperty()
   @IsNotEmpty()
+  @IsPositive({ message: 'Estimated time must be positive' })
   estimatedTime: number;
 
   @ApiProperty({ required: false })

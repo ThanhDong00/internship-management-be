@@ -10,5 +10,6 @@ import { Skill } from 'src/skills/entities/skill.entity';
   imports: [TypeOrmModule.forFeature([Assignment, AssignmentSkill, Skill])],
   providers: [AssignmentsService],
   controllers: [AssignmentsController],
+  exports: [AssignmentsService],
 })
 export class AssignmentsModule {}

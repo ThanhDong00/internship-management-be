@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional } from 'class-validator';
+import { CreateAssignmentDto } from 'src/assignments/dto/create-assignment.dto';
 
 export class CreateTrainingPlanDto {
   @ApiProperty()
@@ -17,4 +18,8 @@ export class CreateTrainingPlanDto {
   @ApiProperty({ required: false })
   @IsOptional()
   skills?: string[];
+
+  @ApiProperty({ required: false, type: [CreateAssignmentDto] })
+  @IsOptional()
+  assignments?: CreateAssignmentDto[];
 }
