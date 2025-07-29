@@ -79,7 +79,7 @@ export class UsersController {
     description: 'Filter users by role',
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'mentor')
   @Get()
   async findAll(@Query() query: FindUsersQueryDto) {
     return this.usersService.findAll(query.role);
