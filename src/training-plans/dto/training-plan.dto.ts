@@ -18,7 +18,7 @@ export class TrainingPlanDto {
   @Expose()
   createdBy: string;
 
-  @Exclude()
+  @Expose()
   isPublic: boolean;
 
   @Exclude()
