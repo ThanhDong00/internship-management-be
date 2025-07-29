@@ -8,14 +8,19 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { AssignmentSkill } from './assignment-skill.entity';
+import { TrainingPlan } from 'src/training-plans/entities/training-plan.entity';
 
 @Entity()
 export class Assignment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: false })
   planId: string;
+
+  @ManyToOne(() => TrainingPlan)
+  @JoinColumn({ name: 'planId' })
+  trainingPlan: TrainingPlan;
 
   @Column({ nullable: false })
   taskId: string;

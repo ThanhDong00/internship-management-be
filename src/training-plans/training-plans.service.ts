@@ -13,32 +13,39 @@ import { CreateTrainingPlanDto } from './dto/create-training-plan.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 import { Skill } from 'src/skills/entities/skill.entity';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
-import { AssignmentsService } from 'src/assignments/assignments.service';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
+import { AssignmentSkill } from 'src/assignments/entities/assignment-skill.entity';
+import { TrainingPlanDto } from './dto/training-plan.dto';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class TrainingPlansService {
   constructor(
     @InjectRepository(TrainingPlan)
     private readonly trainingPlanRepository: Repository<TrainingPlan>,
-    @InjectRepository(TrainingPlanSkill)
-    private readonly trainingPlanSkillRepository: Repository<TrainingPlanSkill>,
     @InjectRepository(Skill)
     private readonly skillRepository: Repository<Skill>,
 
     private readonly dataSource: DataSource,
-    private readonly assignmentsService: AssignmentsService,
   ) {}
 
-  async findAll(): Promise<TrainingPlan[]> {
+  async findAll(): Promise<TrainingPlanDto[]> {
     try {
       const trainingPlans = await this.trainingPlanRepository.find({
         where: {
           isDeleted: false,
         },
-        relations: ['skills', 'skills.skill'],
+        relations: [
+          'skills',
+          'skills.skill',
+          'assignments',
+          'assignments.task',
+        ],
       });
 
-      return trainingPlans;
+      return plainToInstance(TrainingPlanDto, trainingPlans, {
+        excludeExtraneousValues: true,
+      });
     } catch (error) {
       throw new InternalServerErrorException(
         'Error fetching training plans: ' + error.message,
@@ -46,17 +53,24 @@ export class TrainingPlansService {
     }
   }
 
-  async findAllByUser(userId: string): Promise<TrainingPlan[]> {
+  async findAllByUser(userId: string): Promise<TrainingPlanDto[]> {
     try {
       const trainingPlans = await this.trainingPlanRepository.find({
         where: {
           isDeleted: false,
           createdBy: userId,
         },
-        relations: ['skills', 'skills.skill'],
+        relations: [
+          'skills',
+          'skills.skill',
+          'assignments',
+          'assignments.task',
+        ],
       });
 
-      return trainingPlans;
+      return plainToInstance(TrainingPlanDto, trainingPlans, {
+        excludeExtraneousValues: true,
+      });
     } catch (error) {
       throw new InternalServerErrorException(
         'Error fetching training plans: ' + error.message,
@@ -64,14 +78,19 @@ export class TrainingPlansService {
     }
   }
 
-  async findOne(id: string, user: SimpleUserDto): Promise<TrainingPlan> {
+  async findOne(id: string, user: SimpleUserDto): Promise<TrainingPlanDto> {
     try {
       const trainingPlan = await this.trainingPlanRepository.findOne({
         where: {
           id,
           isDeleted: false,
         },
-        relations: ['skills', 'skills.skill'],
+        relations: [
+          'skills',
+          'skills.skill',
+          'assignments',
+          'assignments.task',
+        ],
       });
 
       if (!trainingPlan) {
@@ -84,7 +103,9 @@ export class TrainingPlansService {
         );
       }
 
-      return trainingPlan;
+      return plainToInstance(TrainingPlanDto, trainingPlan, {
+        excludeExtraneousValues: true,
+      });
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -102,7 +123,7 @@ export class TrainingPlansService {
   async createTrainingPlan(
     createTrainingPlanDto: CreateTrainingPlanDto,
     user: SimpleUserDto,
-  ): Promise<TrainingPlan> {
+  ): Promise<TrainingPlanDto> {
     try {
       const { assignments, skills, ...createData } = createTrainingPlanDto;
 
@@ -119,7 +140,6 @@ export class TrainingPlansService {
           ...createData,
           createdBy: user.id,
         });
-
         const savedTrainingPlan = await manager.save(
           TrainingPlan,
           trainingPlan,
@@ -141,8 +161,21 @@ export class TrainingPlansService {
             const assignmentWithPlanId = {
               ...assignmentDto,
               planId: savedTrainingPlan.id,
+              createdBy: user.id,
             };
-            await this.assignmentsService.create(assignmentWithPlanId, user);
+
+            const assignment = manager.create(Assignment, assignmentWithPlanId);
+            const savedAssignment = await manager.save(Assignment, assignment);
+
+            if (assignmentDto.skillIds && assignmentDto.skillIds.length > 0) {
+              const assignmentSkills = assignmentDto.skillIds.map((skillId) =>
+                manager.create(AssignmentSkill, {
+                  assignmentId: savedAssignment.id,
+                  skillId: skillId,
+                }),
+              );
+              await manager.save(AssignmentSkill, assignmentSkills);
+            }
           }
         }
 
@@ -151,14 +184,21 @@ export class TrainingPlansService {
             id: savedTrainingPlan.id,
             isDeleted: false,
           },
-          relations: ['skills', 'skills.skill'],
+          relations: [
+            'skills',
+            'skills.skill',
+            'assignments',
+            'assignments.task',
+          ],
         });
 
         if (!trainingPlanWithSkills) {
           throw new Error('Failed to create training plan with skills');
         }
 
-        return trainingPlanWithSkills;
+        return plainToInstance(TrainingPlanDto, trainingPlanWithSkills, {
+          excludeExtraneousValues: true,
+        });
       });
     } catch (error) {
       if (error instanceof BadRequestException) {
@@ -213,7 +253,7 @@ export class TrainingPlansService {
     id: string,
     updateData: UpdateTrainingPlanDto,
     user: SimpleUserDto,
-  ): Promise<TrainingPlan> {
+  ): Promise<TrainingPlanDto> {
     try {
       const existingTrainingPlan = await this.findOne(id, user);
 

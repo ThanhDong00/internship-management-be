@@ -1,5 +1,5 @@
 @token = {{login.response.body.data.access_token}}
-@id= 35478c12-abea-4e7c-a60a-e6b308156ce9
+@id= 9d1c45ef-a7bc-4072-8eda-9b32491761ab
 @skillId1= {{getAllSkills.response.body.data[0].id}}
 @skillId2= {{getAllSkills.response.body.data[1].id}}
 
@@ -25,14 +25,30 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "name": "New Training Plan",
-  "description": "Description of the training plan",
-  "extra": "Additional information about the training plan",
+  "name": "Frontend Development Training Plan",
+  "description": "Comprehensive training plan for frontend development skills",
+  "extra": "This plan includes React, TypeScript, and CSS frameworks",
   "skills": [
-    "{{skillId1}}",
-    "{{skillId2}}"
+    "941ed370-7c0e-432f-bbf4-b8ec289d0dd6",
+    "c3f39d01-60a2-4a4e-9a39-d9a0e1b11d71",
+    "2b19fc6e-d610-4893-bf78-a7c5868ac164"
+  ],
+  "assignments": [
+    {
+      "skillIds": [
+        "2b19fc6e-d610-4893-bf78-a7c5868ac164",
+        "c3f39d01-60a2-4a4e-9a39-d9a0e1b11d71"
+      ],
+      "taskId": "4e53ec4e-b067-4964-9a7e-8720081bb1e7",
+      "estimatedTime": 24
+    }
   ]
 }
+
+###
+# @name getAllTrainingPlan
+GET http://localhost:3000/training-plans
+Authorization: Bearer {{token}}
 
 ###
 # @name getTrainingPlan

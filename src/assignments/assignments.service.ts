@@ -68,7 +68,6 @@ export class AssignmentsService {
       );
 
       const createdAssignment = await this.findOneById(createdAssignmentId);
-      console.log('Created Assignment:', createdAssignment);
       return plainToInstance(AssignmentDto, createdAssignment, {
         excludeExtraneousValues: true,
       });

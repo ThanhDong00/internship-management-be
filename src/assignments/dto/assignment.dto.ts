@@ -1,5 +1,6 @@
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 import { AssignmentSkillDto } from './assignment-skill.dto';
+import { TaskDto } from 'src/tasks/dto/task.dto';
 
 export class AssignmentDto {
   @Expose()
@@ -10,6 +11,10 @@ export class AssignmentDto {
 
   @Expose()
   taskId: string;
+
+  @Expose()
+  @Type(() => TaskDto)
+  task: TaskDto;
 
   @Expose()
   skills: AssignmentSkillDto[];
@@ -39,5 +44,5 @@ export class AssignmentDto {
   status: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed';
 
   @Exclude()
-  isDeleted?: boolean;
+  isDeleted: boolean;
 }

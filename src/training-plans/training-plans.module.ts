@@ -5,11 +5,17 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TrainingPlan } from './entities/training-plan.entity';
 import { TrainingPlanSkill } from './entities/training-plan-skill.entity';
 import { Skill } from 'src/skills/entities/skill.entity';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { AssignmentsModule } from 'src/assignments/assignments.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TrainingPlan, TrainingPlanSkill, Skill]),
+    TypeOrmModule.forFeature([
+      TrainingPlan,
+      TrainingPlanSkill,
+      Skill,
+      Assignment,
+    ]),
     AssignmentsModule,
   ],
   controllers: [TrainingPlansController],
