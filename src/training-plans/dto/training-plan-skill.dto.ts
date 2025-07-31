@@ -8,7 +8,7 @@ export class TrainingPlanSkillDto {
   @Expose()
   planId: string;
 
-  @Expose()
+  @Exclude()
   skillId: string;
 
   @Exclude()

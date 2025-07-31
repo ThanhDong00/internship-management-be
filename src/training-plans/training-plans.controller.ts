@@ -66,6 +66,21 @@ export class TrainingPlansController {
     return await this.trainingPlansService.findOne(id, user);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Put(':id/assign')
+  async assign(
+    @Param('id') id: string,
+    @User() user: SimpleUserDto,
+    @Body('internId') internId: string,
+  ) {
+    return await this.trainingPlansService.assignTrainingPlanToIntern(
+      id,
+      internId,
+      user,
+    );
+  }
+
   @ApiOperation({ summary: 'Update a training plan by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')

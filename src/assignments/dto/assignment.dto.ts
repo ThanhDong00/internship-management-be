@@ -45,4 +45,7 @@ export class AssignmentDto {
 
   @Exclude()
   isDeleted: boolean;
+
+  @Exclude()
+  isAssigned: boolean;
 }

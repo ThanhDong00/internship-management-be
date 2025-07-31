@@ -9,7 +9,7 @@ POST http://localhost:3000/auth/login
 Content-Type: application/json
 
 {
-  "username": "mentor1",
+  "username": "admin1",
   "password": "123456"
 }
 
@@ -46,8 +46,13 @@ Content-Type: application/json
 }
 
 ###
-# @name getAllTrainingPlan
+# @name getAllTrainingPlanByUser
 GET http://localhost:3000/training-plans
+Authorization: Bearer {{token}}
+
+###
+# @name getAllTrainingPlan
+GET http://localhost:3000/training-plans/all
 Authorization: Bearer {{token}}
 
 ###

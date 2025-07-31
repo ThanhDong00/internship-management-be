@@ -38,67 +38,70 @@ export class TrainingPlansService {
 
   async findAll(): Promise<TrainingPlanDto[]> {
     try {
-      const trainingPlans = await this.trainingPlanRepository.find({
-        where: {
-          isDeleted: false,
-        },
-        relations: [
-          'skills',
-          'skills.skill',
-          'assignments',
-          'assignments.task',
-        ],
-      });
+      const trainingPlans = await this.trainingPlanRepository
+        .createQueryBuilder('plan')
+        .leftJoinAndSelect('plan.skills', 'planSkill')
+        .leftJoinAndSelect('planSkill.skill', 'skill')
+        .leftJoinAndSelect(
+          'plan.assignments',
+          'assignment',
+          'assignment.isAssigned = false',
+        )
+        .leftJoinAndSelect('assignment.task', 'task')
+        .where('plan.isDeleted = false')
+        .getMany();
 
       return plainToInstance(TrainingPlanDto, trainingPlans, {
         excludeExtraneousValues: true,
       });
     } catch (error) {
       throw new InternalServerErrorException(
-        'Error fetching training plans: ' + error.message,
+        `Error fetching training plans: ${error.message}`,
       );
     }
   }
 
   async findAllByUser(userId: string): Promise<TrainingPlanDto[]> {
     try {
-      const trainingPlans = await this.trainingPlanRepository.find({
-        where: {
-          isDeleted: false,
-          createdBy: userId,
-        },
-        relations: [
-          'skills',
-          'skills.skill',
-          'assignments',
-          'assignments.task',
-        ],
-      });
+      const trainingPlans = await this.trainingPlanRepository
+        .createQueryBuilder('plan')
+        .leftJoinAndSelect('plan.skills', 'planSkill')
+        .leftJoinAndSelect('planSkill.skill', 'skill')
+        .leftJoinAndSelect(
+          'plan.assignments',
+          'assignment',
+          'assignment.isAssigned = false',
+        )
+        .leftJoinAndSelect('assignment.task', 'task')
+        .where('plan.isDeleted = false AND plan.createdBy = :userId', {
+          userId: userId,
+        })
+        .getMany();
 
       return plainToInstance(TrainingPlanDto, trainingPlans, {
         excludeExtraneousValues: true,
       });
     } catch (error) {
       throw new InternalServerErrorException(
-        'Error fetching training plans: ' + error.message,
+        `Error fetching training plans: ${error.message}`,
       );
     }
   }
 
   async findOne(id: string, user: SimpleUserDto): Promise<TrainingPlanDto> {
     try {
-      const trainingPlan = await this.trainingPlanRepository.findOne({
-        where: {
-          id,
-          isDeleted: false,
-        },
-        relations: [
-          'skills',
-          'skills.skill',
-          'assignments',
-          'assignments.task',
-        ],
-      });
+      const trainingPlan = await this.trainingPlanRepository
+        .createQueryBuilder('plan')
+        .leftJoinAndSelect('plan.skills', 'planSkill')
+        .leftJoinAndSelect('planSkill.skill', 'skill')
+        .leftJoinAndSelect(
+          'plan.assignments',
+          'assignment',
+          'assignment.isAssigned = false',
+        )
+        .leftJoinAndSelect('assignment.task', 'task')
+        .where('plan.isDeleted = false AND plan.id = :id', { id })
+        .getOne();
 
       if (!trainingPlan) {
         throw new NotFoundException(`Training plan ${id} not found`);
@@ -122,7 +125,7 @@ export class TrainingPlansService {
       }
 
       throw new InternalServerErrorException(
-        'Error fetching training plan: ' + error.message,
+        `Error fetching training plan: ${error.message}`,
       );
     }
   }
@@ -187,10 +190,7 @@ export class TrainingPlansService {
         }
 
         const trainingPlanWithSkills = await manager.findOne(TrainingPlan, {
-          where: {
-            id: savedTrainingPlan.id,
-            isDeleted: false,
-          },
+          where: { id: savedTrainingPlan.id, isDeleted: false },
           relations: [
             'skills',
             'skills.skill',
@@ -213,7 +213,7 @@ export class TrainingPlansService {
       }
 
       throw new InternalServerErrorException(
-        'Error creating training plan: ' + error.message,
+        `Error creating training plan: ${error.message}`,
       );
     }
   }
@@ -436,20 +436,36 @@ export class TrainingPlansService {
 
         // change Assignment's assignedTo to the internId
         const assignmentsToUpdate = await manager.find(Assignment, {
-          where: {
-            planId: id,
-          },
+          where: { planId: id },
         });
 
         // Duplicate assignments for the new intern
         for (const assignment of assignmentsToUpdate) {
           const newAssignment = manager.create(Assignment, {
             ...assignment,
+            id: undefined,
             assignedTo: internId,
             dueDate: internsInfo.endDate,
             isAssigned: true,
           });
-          await manager.save(Assignment, newAssignment);
+          const savedAssignment = await manager.save(Assignment, newAssignment);
+
+          // Duplicate AssignmentSkills
+          const assignmentSkills = await manager.find(AssignmentSkill, {
+            where: { assignmentId: assignment.id },
+          });
+
+          if (assignmentSkills?.length > 0) {
+            const duplicatedSkills = assignmentSkills.map((skill) =>
+              manager.create(AssignmentSkill, {
+                ...skill,
+                id: undefined,
+                assignmentId: savedAssignment.id,
+              }),
+            );
+
+            await manager.save(AssignmentSkill, duplicatedSkills);
+          }
         }
       });
 
