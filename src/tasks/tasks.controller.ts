@@ -40,8 +40,16 @@ export class TasksController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Get()
-  async findAll(@User() user: SimpleUserDto) {
-    return await this.tasksService.findAll(user);
+  async findAllByUser(@User() user: SimpleUserDto) {
+    return await this.tasksService.findAllByUser(user);
+  }
+
+  @ApiOperation({ summary: 'Get all tasks' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Get('all')
+  async findAll() {
+    return await this.tasksService.findAll();
   }
 
   @ApiOperation({ summary: 'Get a task by ID' })

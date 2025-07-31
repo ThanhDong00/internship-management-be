@@ -1,5 +1,5 @@
 @token = {{login.response.body.data.access_token}}
-@id= 4e53ec4e-b067-4964-9a7e-8720081bb1e7
+@id= d8040bed-d9a0-491f-9efb-eb2e92cd8b60
 
 ###
 # @name login
@@ -22,8 +22,14 @@ Content-Type: application/json
 }
 
 ###
-# @name get-all-tasks
+# @name getAllTasksByUser
 GET http://localhost:3000/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 
+# @name getAllTasks
+GET http://localhost:3000/tasks/all
 Authorization: Bearer {{token}}
 Content-Type: application/json
 

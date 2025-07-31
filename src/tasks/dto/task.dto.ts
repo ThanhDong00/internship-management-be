@@ -14,7 +14,7 @@ export class TaskDto {
   @Expose()
   extra?: string;
 
-  @Expose()
+  @Exclude()
   createdBy: string;
 
   @Exclude()

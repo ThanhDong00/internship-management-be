@@ -32,10 +32,50 @@ export class TasksService {
     }
   }
 
-  async findAll(user: SimpleUserDto): Promise<Task[]> {
+  async findAllByUser(user: SimpleUserDto): Promise<TaskDto[]> {
     try {
-      return await this.taskRepository.find({
-        where: { isDeleted: false, createdBy: user.id },
+      const tasks = await this.taskRepository
+        .createQueryBuilder('task')
+        .leftJoinAndSelect('task.creator', 'creator')
+        .where('task.isDeleted = false AND task.createdBy = :userId', {
+          userId: user.id,
+        })
+        .select([
+          'task.id',
+          'task.name',
+          'task.description',
+          'creator.id',
+          'creator.fullName',
+        ])
+        .getMany();
+
+      return plainToInstance(TaskDto, tasks, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error fetching tasks: ' + error.message,
+      );
+    }
+  }
+
+  async findAll(): Promise<TaskDto[]> {
+    try {
+      const tasks = await this.taskRepository
+        .createQueryBuilder('task')
+        .leftJoinAndSelect('task.creator', 'creator')
+        .where('task.isDeleted = false')
+        .select([
+          'task.id',
+          'task.name',
+          'task.description',
+          'creator.id',
+          'creator.fullName',
+        ])
+        .getMany();
+
+      return plainToInstance(TaskDto, tasks, {
+        excludeExtraneousValues: true,
       });
     } catch (error) {
       throw new InternalServerErrorException(
@@ -49,6 +89,12 @@ export class TasksService {
       const task = await this.taskRepository.findOne({
         where: { id, isDeleted: false, createdBy: user.id },
         relations: ['creator'],
+        select: {
+          creator: {
+            id: true,
+            fullName: true,
+          },
+        },
       });
 
       if (!task) throw new NotFoundException('Task not found');
