@@ -3,6 +3,7 @@ import {
   Column,
   Entity,
   JoinColumn,
+  ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -25,6 +26,10 @@ export class InternInformation {
 
   @Column({ nullable: true })
   mentorId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'mentorId' })
+  mentor: User;
 
   @Column({ nullable: true })
   planId: string;

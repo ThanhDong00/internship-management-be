@@ -10,6 +10,7 @@ import { InternsInformationModule } from './interns-information/interns-informat
 import { TasksModule } from './tasks/tasks.module';
 import { TrainingPlansModule } from './training-plans/training-plans.module';
 import { AssignmentsModule } from './assignments/assignments.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import 'dotenv/config';
 
 @Module({
@@ -33,6 +34,7 @@ import 'dotenv/config';
     TasksModule,
     TrainingPlansModule,
     AssignmentsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
