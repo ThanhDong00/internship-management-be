@@ -17,7 +17,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('assignments')
 @ApiBearerAuth()
@@ -59,6 +59,15 @@ export class AssignmentsController {
   }
 
   @ApiOperation({ summary: 'Submit an assignment' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        submittedLink: { type: 'string' },
+      },
+      required: ['submittedLink'],
+    },
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('intern')
   @Put(':id/submit')
@@ -71,6 +80,15 @@ export class AssignmentsController {
   }
 
   @ApiOperation({ summary: 'Review an assignment' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        feedback: { type: 'string' },
+      },
+      required: ['feedback'],
+    },
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('mentor')
   @Put(':id/review')

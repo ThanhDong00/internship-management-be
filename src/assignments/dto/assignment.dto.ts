@@ -17,6 +17,7 @@ export class AssignmentDto {
   task: TaskDto;
 
   @Expose()
+  @Type(() => AssignmentSkillDto)
   skills: AssignmentSkillDto[];
 
   @Expose()
