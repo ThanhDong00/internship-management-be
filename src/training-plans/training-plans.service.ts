@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TrainingPlan } from './entities/training-plan.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { TrainingPlanSkill } from './entities/training-plan-skill.entity';
 import { CreateTrainingPlanDto } from './dto/create-training-plan.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
@@ -264,23 +264,20 @@ export class TrainingPlansService {
     try {
       const existingTrainingPlan = await this.findOne(id, user);
 
-      if (!existingTrainingPlan) {
-        throw new NotFoundException(`Training plan ${id} not found`);
-      }
-
-      if (
-        user.role === 'mentor' &&
-        existingTrainingPlan.createdBy !== user.id
-      ) {
+      if (user.role !== 'admin' && existingTrainingPlan.createdBy !== user.id) {
         throw new ForbiddenException(
           'You do not have permission to update this training plan',
         );
       }
 
-      const { skills, ...updatePlanData } = updateData;
+      const { assignments, skills, ...updatePlanData } = updateData;
 
       if (skills && skills.length > 0) {
         await this.validateSkillsExist(skills);
+      }
+
+      if (assignments && assignments.length > 0) {
+        await this.validateAssignmentsData(assignments);
       }
 
       const updatedTrainingPlanId = await this.dataSource.transaction(
@@ -288,6 +285,7 @@ export class TrainingPlansService {
           Object.assign(existingTrainingPlan, updatePlanData);
           await manager.save(TrainingPlan, existingTrainingPlan);
 
+          // Maybe bug here
           if (skills && skills.length > 0) {
             await manager.delete(TrainingPlanSkill, {
               planId: existingTrainingPlan.id,
@@ -300,6 +298,55 @@ export class TrainingPlansService {
               }),
             );
             await manager.save(TrainingPlanSkill, trainingPlanSkills);
+          }
+
+          // Maybe bug here
+          // Update Assignments if provided
+          if (assignments && assignments.length > 0) {
+            // Delete all existing assignments and their skills for this plan
+            const existingAssignments = await manager.find(Assignment, {
+              where: { planId: existingTrainingPlan.id },
+            });
+
+            if (existingAssignments.length > 0) {
+              const assignmentIds = existingAssignments.map((a) => a.id);
+
+              await Promise.all([
+                manager.delete(AssignmentSkill, {
+                  assignmentId: In(assignmentIds),
+                }),
+                manager.delete(Assignment, {
+                  id: In(assignmentIds),
+                }),
+              ]);
+            }
+
+            // Create new assignments
+            for (const assignmentData of assignments) {
+              const { skillIds, ...assignmentFields } = assignmentData;
+              const newAssignment = manager.create(Assignment, {
+                ...assignmentFields,
+                planId: existingTrainingPlan.id,
+                createdBy: user.id,
+              });
+
+              // Save assignment
+              const savedAssignment = await manager.save(
+                Assignment,
+                newAssignment,
+              );
+
+              // Create AssignmentSkill
+              if (skillIds?.length > 0) {
+                const assignmentSkills = skillIds.map((skillId) =>
+                  manager.create(AssignmentSkill, {
+                    assignmentId: savedAssignment.id,
+                    skillId,
+                  }),
+                );
+                await manager.save(AssignmentSkill, assignmentSkills);
+              }
+            }
           }
 
           return existingTrainingPlan.id;
@@ -373,10 +420,15 @@ export class TrainingPlansService {
           },
         });
 
+        // Duplicate assignments for the new intern
         for (const assignment of assignmentsToUpdate) {
-          assignment.assignedTo = internId;
-          assignment.dueDate = internsInfo.endDate;
-          await manager.save(Assignment, assignment);
+          const newAssignment = manager.create(Assignment, {
+            ...assignment,
+            assignedTo: internId,
+            dueDate: internsInfo.endDate,
+            isAssigned: true,
+          });
+          await manager.save(Assignment, newAssignment);
         }
       });
 

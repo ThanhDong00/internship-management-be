@@ -68,5 +68,8 @@ export class Assignment {
   status: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed';
 
   @Column({ default: false })
+  isAssigned: boolean;
+
+  @Column({ default: false })
   isDeleted: boolean;
 }
