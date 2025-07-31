@@ -1,3 +1,4 @@
+import { TrainingPlan } from 'src/training-plans/entities/training-plan.entity';
 import { User } from 'src/users/entities/user.entity';
 import {
   Column,
@@ -33,6 +34,10 @@ export class InternInformation {
 
   @Column({ nullable: true })
   planId: string;
+
+  @ManyToOne(() => TrainingPlan, (plan) => plan.interns)
+  @JoinColumn({ name: 'planId' })
+  plan: TrainingPlan;
 
   @Column()
   startDate: Date;

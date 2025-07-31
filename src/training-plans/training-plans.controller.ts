@@ -58,6 +58,13 @@ export class TrainingPlansController {
     return this.trainingPlansService.findAll();
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Get('with-interns')
+  async findAllWithInterns(@User() user: SimpleUserDto) {
+    return await this.trainingPlansService.findPlansWithInterns(user);
+  }
+
   @ApiOperation({ summary: 'Get a training plan by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')

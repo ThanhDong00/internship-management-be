@@ -1,6 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { TrainingPlanSkill } from './training-plan-skill.entity';
 import { Assignment } from 'src/assignments/entities/assignment.entity';
+import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
 
 @Entity()
 export class TrainingPlan {
@@ -38,4 +39,7 @@ export class TrainingPlan {
     cascade: true,
   })
   assignments: Assignment[];
+
+  @OneToMany(() => InternInformation, (info) => info.plan)
+  interns: InternInformation[];
 }

@@ -481,4 +481,27 @@ export class TrainingPlansService {
       throw new InternalServerErrorException('Error assigning training plan');
     }
   }
+
+  async findPlansWithInterns(user: SimpleUserDto): Promise<any[]> {
+    try {
+      const result = await this.trainingPlanRepository.find({
+        where: { isDeleted: false, createdBy: user.id },
+        relations: ['interns', 'interns.intern'],
+      });
+
+      return result.map((plan) => ({
+        planId: plan.id,
+        planName: plan.name,
+        interns: plan.interns.map((info) => ({
+          internId: info.intern?.id,
+          internName: info.intern?.fullName,
+          email: info.intern?.email,
+        })),
+      }));
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Error fetching training plans with interns: ${error.message}`,
+      );
+    }
+  }
 }
