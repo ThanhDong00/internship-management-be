@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TrainingPlan } from './entities/training-plan.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { TrainingPlanSkill } from './entities/training-plan-skill.entity';
 import { CreateTrainingPlanDto } from './dto/create-training-plan.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
@@ -17,15 +17,22 @@ import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { AssignmentSkill } from 'src/assignments/entities/assignment-skill.entity';
 import { TrainingPlanDto } from './dto/training-plan.dto';
 import { plainToInstance } from 'class-transformer';
+import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
+import { InternsInformationService } from 'src/interns-information/interns-information.service';
 
 @Injectable()
 export class TrainingPlansService {
   constructor(
     @InjectRepository(TrainingPlan)
     private readonly trainingPlanRepository: Repository<TrainingPlan>,
+
     @InjectRepository(Skill)
     private readonly skillRepository: Repository<Skill>,
 
+    @InjectRepository(InternInformation)
+    private readonly internInformationRepository: Repository<InternInformation>,
+
+    private readonly internsInformationService: InternsInformationService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -257,23 +264,20 @@ export class TrainingPlansService {
     try {
       const existingTrainingPlan = await this.findOne(id, user);
 
-      if (!existingTrainingPlan) {
-        throw new NotFoundException(`Training plan ${id} not found`);
-      }
-
-      if (
-        user.role === 'mentor' &&
-        existingTrainingPlan.createdBy !== user.id
-      ) {
+      if (user.role !== 'admin' && existingTrainingPlan.createdBy !== user.id) {
         throw new ForbiddenException(
           'You do not have permission to update this training plan',
         );
       }
 
-      const { skills, ...updatePlanData } = updateData;
+      const { assignments, skills, ...updatePlanData } = updateData;
 
       if (skills && skills.length > 0) {
         await this.validateSkillsExist(skills);
+      }
+
+      if (assignments && assignments.length > 0) {
+        await this.validateAssignmentsData(assignments);
       }
 
       const updatedTrainingPlanId = await this.dataSource.transaction(
@@ -281,6 +285,7 @@ export class TrainingPlansService {
           Object.assign(existingTrainingPlan, updatePlanData);
           await manager.save(TrainingPlan, existingTrainingPlan);
 
+          // Maybe bug here
           if (skills && skills.length > 0) {
             await manager.delete(TrainingPlanSkill, {
               planId: existingTrainingPlan.id,
@@ -293,6 +298,55 @@ export class TrainingPlansService {
               }),
             );
             await manager.save(TrainingPlanSkill, trainingPlanSkills);
+          }
+
+          // Maybe bug here
+          // Update Assignments if provided
+          if (assignments && assignments.length > 0) {
+            // Delete all existing assignments and their skills for this plan
+            const existingAssignments = await manager.find(Assignment, {
+              where: { planId: existingTrainingPlan.id },
+            });
+
+            if (existingAssignments.length > 0) {
+              const assignmentIds = existingAssignments.map((a) => a.id);
+
+              await Promise.all([
+                manager.delete(AssignmentSkill, {
+                  assignmentId: In(assignmentIds),
+                }),
+                manager.delete(Assignment, {
+                  id: In(assignmentIds),
+                }),
+              ]);
+            }
+
+            // Create new assignments
+            for (const assignmentData of assignments) {
+              const { skillIds, ...assignmentFields } = assignmentData;
+              const newAssignment = manager.create(Assignment, {
+                ...assignmentFields,
+                planId: existingTrainingPlan.id,
+                createdBy: user.id,
+              });
+
+              // Save assignment
+              const savedAssignment = await manager.save(
+                Assignment,
+                newAssignment,
+              );
+
+              // Create AssignmentSkill
+              if (skillIds?.length > 0) {
+                const assignmentSkills = skillIds.map((skillId) =>
+                  manager.create(AssignmentSkill, {
+                    assignmentId: savedAssignment.id,
+                    skillId,
+                  }),
+                );
+                await manager.save(AssignmentSkill, assignmentSkills);
+              }
+            }
           }
 
           return existingTrainingPlan.id;
@@ -322,6 +376,72 @@ export class TrainingPlansService {
       throw new InternalServerErrorException(
         'Error updating training plan: ' + error.message,
       );
+    }
+  }
+
+  async assignTrainingPlanToIntern(
+    id: string,
+    internId: string,
+    user: SimpleUserDto,
+  ) {
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        const trainingPlan = await manager.findOne(TrainingPlan, {
+          where: {
+            id: id,
+            isDeleted: false,
+          },
+        });
+
+        if (!trainingPlan) {
+          throw new NotFoundException(`Training plan ${id} not found`);
+        }
+
+        if (user.role !== 'admin' && user.id !== trainingPlan.createdBy) {
+          throw new ForbiddenException(
+            'You do not have permission to assign this training plan',
+          );
+        }
+
+        const internsInfo =
+          await this.internsInformationService.findByInternId(internId);
+
+        if (!internsInfo) {
+          throw new NotFoundException(`Intern ${internId} not found`);
+        }
+
+        internsInfo.planId = id;
+        await manager.save(InternInformation, internsInfo);
+
+        // change Assignment's assignedTo to the internId
+        const assignmentsToUpdate = await manager.find(Assignment, {
+          where: {
+            planId: id,
+          },
+        });
+
+        // Duplicate assignments for the new intern
+        for (const assignment of assignmentsToUpdate) {
+          const newAssignment = manager.create(Assignment, {
+            ...assignment,
+            assignedTo: internId,
+            dueDate: internsInfo.endDate,
+            isAssigned: true,
+          });
+          await manager.save(Assignment, newAssignment);
+        }
+      });
+
+      return { message: 'Training plan assigned to intern successfully' };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Error assigning training plan');
     }
   }
 }

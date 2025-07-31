@@ -10,8 +10,13 @@ import {
 export class CreateAssignmentDto {
   @ApiProperty()
   @IsOptional()
+  @IsUUID('4', { message: 'Invalid id format' })
+  id?: string;
+
+  @ApiProperty()
+  @IsOptional()
   @IsUUID('4', { message: 'Invalid planId format' })
-  planId: string;
+  planId?: string;
 
   @ApiProperty()
   @IsNotEmpty()
