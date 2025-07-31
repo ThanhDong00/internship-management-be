@@ -262,7 +262,16 @@ export class TrainingPlansService {
     user: SimpleUserDto,
   ): Promise<TrainingPlanDto> {
     try {
-      const existingTrainingPlan = await this.findOne(id, user);
+      const existingTrainingPlan = await this.trainingPlanRepository.findOne({
+        where: {
+          id,
+          isDeleted: false,
+        },
+      });
+
+      if (!existingTrainingPlan) {
+        throw new NotFoundException(`Training plan ${id} not found`);
+      }
 
       if (user.role !== 'admin' && existingTrainingPlan.createdBy !== user.id) {
         throw new ForbiddenException(
@@ -282,6 +291,10 @@ export class TrainingPlansService {
 
       const updatedTrainingPlanId = await this.dataSource.transaction(
         async (manager) => {
+          if (!existingTrainingPlan.id) {
+            throw new BadRequestException('Training plan ID is missing');
+          }
+
           Object.assign(existingTrainingPlan, updatePlanData);
           await manager.save(TrainingPlan, existingTrainingPlan);
 
@@ -323,7 +336,15 @@ export class TrainingPlansService {
 
             // Create new assignments
             for (const assignmentData of assignments) {
-              const { skillIds, ...assignmentFields } = assignmentData;
+              const { skillIds, planId, ...assignmentFields } = assignmentData;
+
+              // Ensure planId is set correctly and not null
+              if (!existingTrainingPlan.id) {
+                throw new BadRequestException(
+                  'Training plan ID is required for assignment',
+                );
+              }
+
               const newAssignment = manager.create(Assignment, {
                 ...assignmentFields,
                 planId: existingTrainingPlan.id,
