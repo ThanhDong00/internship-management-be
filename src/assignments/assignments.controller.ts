@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AssignmentsService } from './assignments.service';
@@ -17,7 +18,13 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 
 @ApiTags('assignments')
 @ApiBearerAuth()
@@ -36,11 +43,34 @@ export class AssignmentsController {
     return this.assignmentsService.create(payLoad, user);
   }
 
-  @ApiOperation({ summary: 'Get all assignments' })
+  @ApiOperation({ summary: 'Get all assignments by user' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['Todo', 'InProgress', 'Submitted', 'Reviewed'],
+  })
   @UseGuards(JwtAuthGuard)
   @Get()
-  async findAll(@User() user: SimpleUserDto) {
-    return this.assignmentsService.findAll(user);
+  async findAllByUser(
+    @User() user: SimpleUserDto,
+    @Query('status') status?: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+  ) {
+    return this.assignmentsService.findAllByUser(user, status);
+  }
+
+  @ApiOperation({ summary: 'Get all assignments' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['Todo', 'InProgress', 'Submitted', 'Reviewed'],
+  })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Get('all')
+  async findAll(
+    @Query('status') status?: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+  ) {
+    return this.assignmentsService.findAll(status);
   }
 
   @ApiOperation({ summary: 'Get a single assignment by ID' })

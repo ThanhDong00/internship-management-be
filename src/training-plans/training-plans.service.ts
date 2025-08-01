@@ -48,6 +48,8 @@ export class TrainingPlansService {
           'assignment.isAssigned = false',
         )
         .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
+        .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
         .where('plan.isDeleted = false')
         .getMany();
 
@@ -73,6 +75,8 @@ export class TrainingPlansService {
           'assignment.isAssigned = false',
         )
         .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
+        .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
         .where('plan.isDeleted = false AND plan.createdBy = :userId', {
           userId: userId,
         })
@@ -100,6 +104,8 @@ export class TrainingPlansService {
           'assignment.isAssigned = false',
         )
         .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
+        .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
         .where('plan.isDeleted = false AND plan.id = :id', { id })
         .getOne();
 
@@ -431,7 +437,9 @@ export class TrainingPlansService {
           throw new NotFoundException(`Intern ${internId} not found`);
         }
 
+        // Assign planId and mentorId to the intern's information
         internsInfo.planId = id;
+        internsInfo.mentorId = trainingPlan.createdBy;
         await manager.save(InternInformation, internsInfo);
 
         // change Assignment's assignedTo to the internId

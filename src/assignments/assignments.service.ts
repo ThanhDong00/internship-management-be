@@ -117,7 +117,38 @@ export class AssignmentsService {
     return assignment;
   }
 
-  async findAll(user: SimpleUserDto): Promise<AssignmentDto[]> {
+  async findAll(
+    status?: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+  ): Promise<AssignmentDto[]> {
+    try {
+      const whereCondition: any = {
+        isDeleted: false,
+      };
+
+      if (status) {
+        whereCondition.status = status;
+      }
+
+      const assignments = await this.assignmentRepository.find({
+        where: whereCondition,
+        relations: ['skills', 'skills.skill', 'task'],
+      });
+
+      return plainToInstance(AssignmentDto, assignments, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error fetching assignments',
+        error.message,
+      );
+    }
+  }
+
+  async findAllByUser(
+    user: SimpleUserDto,
+    status?: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+  ): Promise<AssignmentDto[]> {
     try {
       const whereCondition: any = {
         isDeleted: false,
@@ -127,6 +158,10 @@ export class AssignmentsService {
         whereCondition.assignedTo = user.id;
       } else if (user.role === 'mentor') {
         whereCondition.createdBy = user.id;
+      }
+
+      if (status) {
+        whereCondition.status = status;
       }
 
       const assignments = await this.assignmentRepository.find({

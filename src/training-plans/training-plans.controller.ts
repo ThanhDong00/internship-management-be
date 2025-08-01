@@ -18,7 +18,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('training-plans')
 @ApiBearerAuth()
@@ -73,6 +73,16 @@ export class TrainingPlansController {
     return await this.trainingPlansService.findOne(id, user);
   }
 
+  @ApiOperation({ summary: 'Assign a training plan to an intern' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        internId: { type: 'string' },
+      },
+      required: ['internId'],
+    },
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Put(':id/assign')
