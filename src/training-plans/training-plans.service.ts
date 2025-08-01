@@ -20,6 +20,7 @@ import { plainToInstance } from 'class-transformer';
 import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
 import { InternsInformationService } from 'src/interns-information/interns-information.service';
 import { InternInformationDto } from 'src/interns-information/dto/intern-information.dto';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class TrainingPlansService {
@@ -442,6 +443,14 @@ export class TrainingPlansService {
         internsInfo.planId = id;
         internsInfo.mentorId = trainingPlan.createdBy;
         await manager.save(InternInformation, internsInfo);
+
+        // Change isAssigned in User entity to true
+        const updatedInternUserResult = await manager.update(User, internId, {
+          isAssigned: true,
+        });
+        const updatedMentorUserResult = await manager.update(User, user.id, {
+          isAssigned: true,
+        });
 
         // change Assignment's assignedTo to the internId
         const assignmentsToUpdate = await manager.find(Assignment, {
