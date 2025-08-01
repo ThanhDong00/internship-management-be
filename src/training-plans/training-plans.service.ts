@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TrainingPlan } from './entities/training-plan.entity';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
 import { TrainingPlanSkill } from './entities/training-plan-skill.entity';
 import { CreateTrainingPlanDto } from './dto/create-training-plan.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
@@ -19,6 +19,7 @@ import { TrainingPlanDto } from './dto/training-plan.dto';
 import { plainToInstance } from 'class-transformer';
 import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
 import { InternsInformationService } from 'src/interns-information/interns-information.service';
+import { InternInformationDto } from 'src/interns-information/dto/intern-information.dto';
 
 @Injectable()
 export class TrainingPlansService {
@@ -492,20 +493,31 @@ export class TrainingPlansService {
 
   async findPlansWithInterns(user: SimpleUserDto): Promise<any[]> {
     try {
-      const result = await this.trainingPlanRepository.find({
-        where: { isDeleted: false, createdBy: user.id },
-        relations: ['interns', 'interns.intern'],
-      });
+      const queryBuilder = this.internInformationRepository
+        .createQueryBuilder('internInfo')
+        .leftJoinAndSelect('internInfo.intern', 'intern')
+        .leftJoinAndSelect('internInfo.mentor', 'mentor')
+        .leftJoinAndSelect('internInfo.plan', 'plan')
+        .leftJoinAndSelect('plan.skills', 'planSkills')
+        .leftJoinAndSelect('planSkills.skill', 'skill')
+        .leftJoinAndSelect(
+          'plan.assignments',
+          'assignments',
+          'assignments.isDeleted = :assignmentDeleted AND assignments.isAssigned = :isAssigned AND assignments.assignedTo = intern.id',
+          { assignmentDeleted: false, isAssigned: true },
+        )
+        .leftJoinAndSelect('assignments.task', 'task')
+        .leftJoinAndSelect('assignments.skills', 'assignmentSkills')
+        .leftJoinAndSelect('assignmentSkills.skill', 'assignmentSkill')
+        .where('internInfo.isDeleted = :internInfoDeleted', {
+          internInfoDeleted: false,
+        })
+        .andWhere('internInfo.planId IS NOT NULL');
 
-      return result.map((plan) => ({
-        planId: plan.id,
-        planName: plan.name,
-        interns: plan.interns.map((info) => ({
-          internId: info.intern?.id,
-          internName: info.intern?.fullName,
-          email: info.intern?.email,
-        })),
-      }));
+      const internsInfo = await queryBuilder.getMany();
+      return plainToInstance(InternInformationDto, internsInfo, {
+        excludeExtraneousValues: true,
+      });
     } catch (error) {
       throw new InternalServerErrorException(
         `Error fetching training plans with interns: ${error.message}`,

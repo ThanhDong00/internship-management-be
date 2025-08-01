@@ -41,7 +41,7 @@ export class Assignment {
   @Column({ nullable: false })
   createdBy: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'uuid' })
   assignedTo: string;
 
   @Column()

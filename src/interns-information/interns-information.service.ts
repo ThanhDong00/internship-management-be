@@ -30,6 +30,7 @@ export class InternsInformationService {
     try {
       const internInfos = await this.internInfoRepo.find({
         where: { isDeleted: false },
+        relations: ['intern', 'mentor', 'plan'],
       });
       return plainToInstance(InternInformationDto, internInfos, {
         excludeExtraneousValues: true,
