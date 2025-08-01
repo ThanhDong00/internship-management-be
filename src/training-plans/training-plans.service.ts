@@ -512,7 +512,8 @@ export class TrainingPlansService {
         .where('internInfo.isDeleted = :internInfoDeleted', {
           internInfoDeleted: false,
         })
-        .andWhere('internInfo.planId IS NOT NULL');
+        .andWhere('internInfo.planId IS NOT NULL')
+        .andWhere('plan.createdBy = :userId', { userId: user.id });
 
       const internsInfo = await queryBuilder.getMany();
       return plainToInstance(InternInformationDto, internsInfo, {
