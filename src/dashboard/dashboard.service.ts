@@ -146,6 +146,11 @@ export class DashboardService {
 
       return {
         internsCount,
+        internsByStatus: {
+          completed: internsCount.completed,
+          inProgress: internsCount.inProgress,
+          onboarding: internsCount.onboarding,
+        },
         monthlyInternsCount,
         fieldInternsCount,
         mentorInternsCount,
