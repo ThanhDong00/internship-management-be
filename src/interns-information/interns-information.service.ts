@@ -88,6 +88,7 @@ export class InternsInformationService {
         .leftJoinAndSelect('assignment.task', 'task')
         .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
         .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
+        .leftJoinAndSelect('internInfo.mentor', 'mentor')
         .where('internInfo.internId = :internId', { internId: user.id })
         .getOne();
 
