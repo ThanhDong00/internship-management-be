@@ -211,7 +211,11 @@ export class AssignmentsService {
     }
   }
 
-  async updateStatus(id: string, user: SimpleUserDto): Promise<AssignmentDto> {
+  async updateStatus(
+    id: string,
+    user: SimpleUserDto,
+    status: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+  ): Promise<AssignmentDto> {
     try {
       const whereCondition: any = {
         id: id,
@@ -230,19 +234,26 @@ export class AssignmentsService {
         throw new NotFoundException('Assignment not found');
       }
 
-      assignment.status = 'InProgress';
+      if (!status) {
+        throw new BadRequestException('Status is required');
+      }
+
+      assignment.status = status;
       await this.assignmentRepository.save(assignment);
 
       return plainToInstance(AssignmentDto, assignment, {
         excludeExtraneousValues: true,
       });
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
 
       throw new InternalServerErrorException(
-        'Error updating assignment status to InProgress',
+        `Error updating assignment status to ${status}`,
         error.message,
       );
     }

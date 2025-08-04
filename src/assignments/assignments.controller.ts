@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  Patch,
   Post,
   Put,
   Query,
@@ -81,11 +80,27 @@ export class AssignmentsController {
   }
 
   @ApiOperation({ summary: 'Update assignment status' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['Todo', 'InProgress', 'Submitted', 'Reviewed'],
+        },
+      },
+      required: ['status'],
+    },
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('intern')
-  @Patch(':id/status')
-  async updateStatus(@Param('id') id: string, @User() user: SimpleUserDto) {
-    return this.assignmentsService.updateStatus(id, user);
+  @Put(':id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @User() user: SimpleUserDto,
+    @Body('status') status: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+  ) {
+    return this.assignmentsService.updateStatus(id, user, status);
   }
 
   @ApiOperation({ summary: 'Submit an assignment' })
