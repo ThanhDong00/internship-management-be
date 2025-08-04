@@ -48,13 +48,19 @@ export class AssignmentsController {
     required: false,
     enum: ['Todo', 'InProgress', 'Submitted', 'Reviewed'],
   })
+  @ApiQuery({
+    name: 'isAssigned',
+    required: false,
+    type: 'boolean',
+  })
   @UseGuards(JwtAuthGuard)
   @Get()
   async findAllByUser(
     @User() user: SimpleUserDto,
     @Query('status') status?: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+    @Query('isAssigned') isAssigned?: boolean,
   ) {
-    return this.assignmentsService.findAllByUser(user, status);
+    return this.assignmentsService.findAllByUser(user, status, isAssigned);
   }
 
   @ApiOperation({ summary: 'Get all assignments' })
@@ -63,20 +69,36 @@ export class AssignmentsController {
     required: false,
     enum: ['Todo', 'InProgress', 'Submitted', 'Reviewed'],
   })
+  @ApiQuery({
+    name: 'isAssigned',
+    required: false,
+    type: 'boolean',
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get('all')
   async findAll(
     @Query('status') status?: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+    @Query('isAssigned') isAssigned?: boolean,
   ) {
-    return this.assignmentsService.findAll(status);
+    return this.assignmentsService.findAll(status, isAssigned);
   }
 
   @ApiOperation({ summary: 'Get a single assignment by ID' })
+  @ApiQuery({
+    name: 'isAssigned',
+    required: false,
+    type: 'boolean',
+    default: true,
+  })
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async findOne(@Param('id') id: string, @User() user: SimpleUserDto) {
-    return this.assignmentsService.findOne(id, user);
+  async findOne(
+    @Param('id') id: string,
+    @User() user: SimpleUserDto,
+    @Query('isAssigned') isAssigned?: boolean,
+  ) {
+    return this.assignmentsService.findOne(id, user, isAssigned);
   }
 
   @ApiOperation({ summary: 'Update assignment status' })

@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { AssignmentSkill } from './assignment-skill.entity';
 import { TrainingPlan } from 'src/training-plans/entities/training-plan.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Entity()
 export class Assignment {
@@ -43,6 +44,10 @@ export class Assignment {
 
   @Column({ nullable: true, type: 'uuid' })
   assignedTo: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'assignedTo' })
+  assignee: User;
 
   @Column()
   estimatedTime: number;

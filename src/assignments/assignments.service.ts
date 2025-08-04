@@ -119,6 +119,7 @@ export class AssignmentsService {
 
   async findAll(
     status?: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+    isAssigned?: boolean,
   ): Promise<AssignmentDto[]> {
     try {
       const whereCondition: any = {
@@ -129,10 +130,18 @@ export class AssignmentsService {
         whereCondition.status = status;
       }
 
-      const assignments = await this.assignmentRepository.find({
-        where: whereCondition,
-        relations: ['skills', 'skills.skill', 'task'],
-      });
+      if (isAssigned !== undefined) {
+        whereCondition.isAssigned = isAssigned;
+      }
+
+      const assignments = await this.assignmentRepository
+        .createQueryBuilder('assignment')
+        .leftJoinAndSelect('assignment.skills', 'skills')
+        .leftJoinAndSelect('skills.skill', 'skill')
+        .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.assignee', 'assignee')
+        .where(whereCondition)
+        .getMany();
 
       return plainToInstance(AssignmentDto, assignments, {
         excludeExtraneousValues: true,
@@ -148,6 +157,7 @@ export class AssignmentsService {
   async findAllByUser(
     user: SimpleUserDto,
     status?: 'Todo' | 'InProgress' | 'Submitted' | 'Reviewed',
+    isAssigned?: boolean,
   ): Promise<AssignmentDto[]> {
     try {
       const whereCondition: any = {
@@ -164,10 +174,18 @@ export class AssignmentsService {
         whereCondition.status = status;
       }
 
-      const assignments = await this.assignmentRepository.find({
-        where: whereCondition,
-        relations: ['skills', 'skills.skill', 'task'],
-      });
+      if (isAssigned !== undefined) {
+        whereCondition.isAssigned = isAssigned;
+      }
+
+      const assignments = await this.assignmentRepository
+        .createQueryBuilder('assignment')
+        .leftJoinAndSelect('assignment.skills', 'skills')
+        .leftJoinAndSelect('skills.skill', 'skill')
+        .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.assignee', 'assignee')
+        .where(whereCondition)
+        .getMany();
 
       return plainToInstance(AssignmentDto, assignments, {
         excludeExtraneousValues: true,
@@ -180,11 +198,16 @@ export class AssignmentsService {
     }
   }
 
-  async findOne(id: string, user: SimpleUserDto): Promise<AssignmentDto> {
+  async findOne(
+    id: string,
+    user: SimpleUserDto,
+    isAssigned?: boolean,
+  ): Promise<AssignmentDto> {
     try {
       const whereCondition: any = {
         id: id,
         isDeleted: false,
+        isAssigned: true,
       };
 
       if (user.role === 'intern') {
@@ -193,16 +216,26 @@ export class AssignmentsService {
         whereCondition.createdBy = user.id;
       }
 
-      const assignment = await this.assignmentRepository.findOne({
-        where: whereCondition,
-        relations: ['skills', 'skills.skill', 'task'],
-      });
+      if (isAssigned !== undefined) {
+        whereCondition.isAssigned = isAssigned;
+      }
+
+      const assignment = await this.assignmentRepository
+        .createQueryBuilder('assignment')
+        .leftJoinAndSelect('assignment.skills', 'skills')
+        .leftJoinAndSelect('skills.skill', 'skill')
+        .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.assignee', 'assignee')
+        .where(whereCondition)
+        .getOne();
 
       if (!assignment) {
         throw new NotFoundException('Assignment not found');
       }
 
-      return plainToInstance(AssignmentDto, assignment);
+      return plainToInstance(AssignmentDto, assignment, {
+        excludeExtraneousValues: true,
+      });
     } catch (error) {
       throw new InternalServerErrorException(
         'Error fetching assignment',
