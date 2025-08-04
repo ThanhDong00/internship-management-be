@@ -16,6 +16,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/auth/decorators/user.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 
 @ApiTags('interns-information')
 @ApiBearerAuth()
@@ -31,6 +32,14 @@ export class InternsInformationController {
   @Get()
   async findAll() {
     return await this.internsInformationService.findAll();
+  }
+
+  @ApiOperation({ summary: 'Get intern information for current intern user' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('intern')
+  @Get('interns')
+  async findOneForIntern(@User() user: SimpleUserDto) {
+    return await this.internsInformationService.findOneForIntern(user);
   }
 
   @ApiOperation({ summary: 'Get intern information by ID' })

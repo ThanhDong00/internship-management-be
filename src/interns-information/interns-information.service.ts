@@ -11,6 +11,7 @@ import { CreateInternInformationDto } from './dto/create-intern-information.dto'
 import { InternInformationDto } from './dto/intern-information.dto';
 import { plainToInstance } from 'class-transformer';
 import { UpdateInternInformationDto } from './dto/update-intern-information.dto';
+import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 
 @Injectable()
 export class InternsInformationService {
@@ -65,6 +66,45 @@ export class InternsInformationService {
 
       throw new InternalServerErrorException(
         'Error fetching intern information: ' + error.message,
+      );
+    }
+  }
+
+  async findOneForIntern(user: SimpleUserDto): Promise<InternInformationDto> {
+    try {
+      const plan = await this.internInfoRepo
+        .createQueryBuilder('internInfo')
+        .leftJoinAndSelect('internInfo.plan', 'plan')
+        .leftJoinAndSelect('plan.skills', 'planSkill')
+        .leftJoinAndSelect('planSkill.skill', 'skill')
+        .leftJoinAndSelect(
+          'plan.assignments',
+          'assignment',
+          'assignment.isAssigned = true AND assignment.assignedTo = :internId',
+          {
+            internId: user.id,
+          },
+        )
+        .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
+        .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
+        .where('internInfo.internId = :internId', { internId: user.id })
+        .getOne();
+
+      if (!plan) {
+        throw new NotFoundException(`Training plan not found for intern`);
+      }
+
+      return plainToInstance(InternInformationDto, plan, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        `Error fetching training plan for intern: ${error.message}`,
       );
     }
   }

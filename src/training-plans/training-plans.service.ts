@@ -138,6 +138,48 @@ export class TrainingPlansService {
     }
   }
 
+  // Can be not used, for now
+  async findPlansForInterns(
+    user: SimpleUserDto,
+  ): Promise<InternInformationDto> {
+    try {
+      const plan = await this.internInformationRepository
+        .createQueryBuilder('internInfo')
+        .leftJoinAndSelect('internInfo.plan', 'plan')
+        .leftJoinAndSelect('plan.skills', 'planSkill')
+        .leftJoinAndSelect('planSkill.skill', 'skill')
+        .leftJoinAndSelect(
+          'plan.assignments',
+          'assignment',
+          'assignment.isAssigned = true AND assignment.assignedTo = :internId',
+          {
+            internId: user.id,
+          },
+        )
+        .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
+        .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
+        .where('internInfo.internId = :internId', { internId: user.id })
+        .getOne();
+
+      if (!plan) {
+        throw new NotFoundException(`Training plan not found for intern`);
+      }
+
+      return plainToInstance(InternInformationDto, plan, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        `Error fetching training plan for intern: ${error.message}`,
+      );
+    }
+  }
+
   async createTrainingPlan(
     createTrainingPlanDto: CreateTrainingPlanDto,
     user: SimpleUserDto,

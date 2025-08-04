@@ -58,6 +58,15 @@ export class TrainingPlansController {
     return this.trainingPlansService.findAll();
   }
 
+  // @ApiOperation({ summary: 'Get training plans for Interns' })
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles('intern')
+  // @Get('interns')
+  // async findPlansForInterns(@User() user: SimpleUserDto) {
+  //   return await this.trainingPlansService.findPlansForInterns(user);
+  // }
+
+  @ApiOperation({ summary: 'Get all training plans with interns' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Get('with-interns')
