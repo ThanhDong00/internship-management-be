@@ -238,6 +238,12 @@ export class AssignmentsService {
         throw new BadRequestException('Status is required');
       }
 
+      if (status === 'Reviewed') {
+        throw new ForbiddenException(
+          'You cannot change the status to Reviewed',
+        );
+      }
+
       assignment.status = status;
       await this.assignmentRepository.save(assignment);
 
@@ -247,7 +253,8 @@ export class AssignmentsService {
     } catch (error) {
       if (
         error instanceof NotFoundException ||
-        error instanceof BadRequestException
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
       ) {
         throw error;
       }
