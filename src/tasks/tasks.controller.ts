@@ -1,9 +1,8 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
-  InternalServerErrorException,
-  NotFoundException,
   Param,
   Post,
   Put,
@@ -58,6 +57,22 @@ export class TasksController {
   @Get(':id')
   async findOne(@Param('id') id: string, @User() user: SimpleUserDto) {
     return await this.tasksService.findOne(id, user);
+  }
+
+  @ApiOperation({ summary: 'Delete a task by ID' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Delete(':id/soft-delete')
+  async softDelete(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return await this.tasksService.softDelete(id, user);
+  }
+
+  @ApiOperation({ summary: 'Restore a soft-deleted task by ID' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Put(':id/restore')
+  async restore(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return await this.tasksService.restore(id, user);
   }
 
   @ApiOperation({ summary: 'Update a task by ID' })

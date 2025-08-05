@@ -56,6 +56,14 @@ export class SkillsController {
     return await this.skillsService.findOne(id, user);
   }
 
+  @ApiOperation({ summary: 'Restore deleted skill by Id' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Put(':id/restore')
+  async restore(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return this.skillsService.restore(id, user);
+  }
+
   @ApiOperation({ summary: 'Update a skill by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
@@ -74,13 +82,5 @@ export class SkillsController {
   @Delete(':id')
   async softDelete(@Param('id') id: string, @User() user: SimpleUserDto) {
     return this.skillsService.softDelete(id, user);
-  }
-
-  @ApiOperation({ summary: 'Restore deleted skill by Id' })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'mentor')
-  @Post(':id/restore')
-  async restore(@Param('id') id: string, @User() user: SimpleUserDto) {
-    return this.skillsService.restore(id, user);
   }
 }
