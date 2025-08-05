@@ -576,4 +576,149 @@ export class TrainingPlansService {
       );
     }
   }
+
+  async softDelete(id: string, user: SimpleUserDto): Promise<void> {
+    try {
+      const whereCondition: any = {
+        id: id,
+        isDeleted: false,
+      };
+
+      if (user.role !== 'admin') {
+        whereCondition.createdBy = user.id;
+      }
+
+      const trainingPlan = await this.trainingPlanRepository.findOne({
+        where: whereCondition,
+        relations: ['skills', 'assignments'],
+      });
+
+      if (!trainingPlan) {
+        throw new NotFoundException(
+          'Training plan not found or you do not have permission to delete this training plan',
+        );
+      }
+
+      await this.checkTrainingPlanReferences(id);
+
+      await this.dataSource.transaction(async (manager) => {
+        await manager.update(TrainingPlan, id, { isDeleted: true });
+
+        await manager.update(
+          TrainingPlanSkill,
+          { planId: id },
+          { isDeleted: true },
+        );
+
+        const assignments = await manager.find(Assignment, {
+          where: { planId: id, isDeleted: false },
+        });
+
+        if (assignments.length > 0) {
+          const assignmentIds = assignments.map((a) => a.id);
+
+          await manager.update(
+            Assignment,
+            { planId: id, isDeleted: false },
+            { isDeleted: true },
+          );
+
+          await manager.update(
+            AssignmentSkill,
+            { assignmentId: In(assignmentIds), isDeleted: false },
+            { isDeleted: true },
+          );
+        }
+      });
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error deleting training plan: ' + error.message,
+      );
+    }
+  }
+
+  private async checkTrainingPlanReferences(id: string): Promise<void> {
+    const references: string[] = [];
+
+    const internInfoCount = await this.internInformationRepository
+      .createQueryBuilder('internInfo')
+      .where('internInfo.planId = :planId', { planId: id })
+      .andWhere('internInfo.isDeleted = false')
+      .getCount();
+
+    if (internInfoCount > 0) {
+      references.push(`${internInfoCount} intern(s)`);
+    }
+
+    if (references.length > 0) {
+      throw new BadRequestException(
+        `Cannot delete training plan. It is being used by: ${references.join(', ')}. Please unassign from interns first.`,
+      );
+    }
+  }
+
+  async restore(id: string, user: SimpleUserDto): Promise<TrainingPlanDto> {
+    try {
+      const whereCondition: any = {
+        id: id,
+        isDeleted: true,
+      };
+
+      if (user.role !== 'admin') {
+        whereCondition.createdBy = user.id;
+      }
+
+      const trainingPlan = await this.trainingPlanRepository.findOne({
+        where: whereCondition,
+      });
+
+      if (!trainingPlan) {
+        throw new NotFoundException('Deleted training plan not found');
+      }
+
+      await this.dataSource.transaction(async (manager) => {
+        await manager.update(TrainingPlan, id, { isDeleted: false });
+
+        await manager.update(
+          Assignment,
+          { planId: id, isDeleted: true },
+          { isDeleted: false },
+        );
+
+        const updatedAssignment = await manager.find(Assignment, {
+          where: { planId: id, isDeleted: false },
+          select: ['id'],
+        });
+
+        if (updatedAssignment.length > 0) {
+          const updatedAssignmentIds = updatedAssignment.map((a) => a.id);
+          await manager.update(
+            AssignmentSkill,
+            { assignmentId: In(updatedAssignmentIds), isDeleted: true },
+            { isDeleted: false },
+          );
+        }
+      });
+
+      const restoredPlan = await this.findOne(id, user);
+      return restoredPlan;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error restoring training plan: ' + error.message,
+      );
+    }
+  }
 }

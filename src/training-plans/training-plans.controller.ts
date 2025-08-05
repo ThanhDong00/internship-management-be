@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   InternalServerErrorException,
   NotFoundException,
@@ -107,6 +108,14 @@ export class TrainingPlansController {
     );
   }
 
+  @ApiOperation({ summary: 'Restore a training plan with Id' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Put(':id/restore')
+  async restore(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return this.trainingPlansService.restore(id, user);
+  }
+
   @ApiOperation({ summary: 'Update a training plan by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
@@ -117,5 +126,13 @@ export class TrainingPlansController {
     @User() user: SimpleUserDto,
   ) {
     return this.trainingPlansService.update(id, updateTrainingPlanDto, user);
+  }
+
+  @ApiOperation({ summary: 'Delete a training plan with Id' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Delete(':id')
+  async softDelete(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return this.trainingPlansService.softDelete(id, user);
   }
 }
