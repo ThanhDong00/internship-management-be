@@ -19,6 +19,9 @@ export class AssignmentSkill {
   @Column()
   skillId: string;
 
+  @Column({ default: false })
+  isDeleted: boolean;
+
   @ManyToOne(() => Assignment, (assignment) => assignment.skills)
   @JoinColumn({ name: 'assignmentId' })
   assignment: Assignment;

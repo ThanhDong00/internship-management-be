@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -475,9 +476,11 @@ export class AssignmentsService {
       await this.dataSource.transaction(async (manager) => {
         await manager.update(Assignment, id, { isDeleted: true });
 
-        await manager.delete(AssignmentSkill, {
-          assignmentId: id,
-        });
+        await manager.update(
+          AssignmentSkill,
+          { assignmentId: id, isDeleted: false },
+          { isDeleted: true },
+        );
       });
     } catch (error) {
       if (
@@ -524,7 +527,7 @@ export class AssignmentsService {
     }
   }
 
-  async restore(id: string, user: SimpleUserDto): Promise<AssignmentDto> {
+  async restore(id: string, user: SimpleUserDto): Promise<any> {
     try {
       const whereCondition: any = {
         id: id,
@@ -540,20 +543,22 @@ export class AssignmentsService {
       });
 
       if (!assignment) {
-        throw new NotFoundException('Deleted assignment not found');
+        throw new NotFoundException(
+          'Deleted assignment not found or you do not have permission to restore this assignment',
+        );
       }
 
-      await this.assignmentRepository.update(id, { isDeleted: false });
+      await this.dataSource.transaction(async (manager) => {
+        await manager.update(Assignment, id, { isDeleted: false });
 
-      const restoredAssignment = await this.assignmentRepository
-        .createQueryBuilder('assignment')
-        .where('assignment.id = :id', { id })
-        .andWhere('assignment.isDeleted = false')
-        .getOne();
+        await manager.update(
+          AssignmentSkill,
+          { assignmentId: id, isDeleted: true },
+          { isDeleted: false },
+        );
+      });
 
-      if (!restoredAssignment) {
-        throw new NotFoundException('Restored assignment not found');
-      }
+      const restoredAssignment = await this.findOneById(id);
 
       return plainToInstance(AssignmentDto, restoredAssignment, {
         excludeExtraneousValues: true,
@@ -562,10 +567,8 @@ export class AssignmentsService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-
       throw new InternalServerErrorException(
-        'Error restoring assignment',
-        error.message,
+        'Error restoring assignment: ' + error.message,
       );
     }
   }
