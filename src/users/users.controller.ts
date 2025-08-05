@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -24,6 +25,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { SimpleUserDto } from './dto/simple-user.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -144,5 +146,13 @@ export class UsersController {
   @Put(':id')
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
+  }
+
+  @ApiOperation({ summary: 'Delete User by Id' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Delete(':id')
+  async remove(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return this.usersService.softDelete(id, user);
   }
 }

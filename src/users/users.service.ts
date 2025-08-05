@@ -1,4 +1,7 @@
 import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -15,6 +18,10 @@ import * as bcrypt from 'bcrypt';
 import { SimpleUserDto } from './dto/simple-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
+import { TrainingPlan } from 'src/training-plans/entities/training-plan.entity';
+import { Task } from 'src/tasks/entities/task.entity';
+import { Skill } from 'src/skills/entities/skill.entity';
+import { Assignment } from 'src/assignments/entities/assignment.entity';
 
 export interface FindAllUsersResponse {
   users: UserDto[];
@@ -222,6 +229,123 @@ export class UsersService {
       return plainToInstance(UserDto, user);
     } catch (error) {
       throw new InternalServerErrorException('Error updating user profile');
+    }
+  }
+
+  async softDelete(id: string, user: SimpleUserDto): Promise<void> {
+    try {
+      if (id === user.id)
+        throw new BadRequestException('You cannot delete your own account');
+
+      if (user.role !== 'admin')
+        throw new ForbiddenException('Only admin can delete users');
+
+      const targetUser = await this.usersRepository.findOne({
+        where: { id, isDeleted: false },
+        relations: ['internInformation'],
+      });
+
+      if (!targetUser) throw new NotFoundException('User not found');
+
+      if (targetUser.role === 'intern') {
+        if (targetUser.internInformation) {
+          if (targetUser.internInformation.planId) {
+            throw new ConflictException(
+              'Cannot delete this user! Because conflict data',
+            );
+          }
+        }
+
+        await this.dataSource.transaction(async (manager) => {
+          await manager.update(User, { id: id }, { isDeleted: true });
+          await manager.update(
+            InternInformation,
+            { internId: id },
+            { isDeleted: true },
+          );
+        });
+      } else {
+        await this.checkUserReferences(id, targetUser);
+
+        await this.usersRepository.update(id, { isDeleted: true });
+      }
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error deleting user: ' + error.message,
+      );
+    }
+  }
+
+  private async checkUserReferences(
+    userId: string,
+    targetUser: User,
+  ): Promise<void> {
+    const references: string[] = [];
+
+    // Training plan
+    const trainingPlanCount = await this.dataSource
+      .getRepository(TrainingPlan)
+      .createQueryBuilder('plan')
+      .where('plan.createdBy = :userId', { userId: userId })
+      .andWhere('plan.isDeleted = false')
+      .getCount();
+
+    if (trainingPlanCount > 0) {
+      references.push(
+        `${trainingPlanCount} training plan(s) created by this user`,
+      );
+    }
+
+    // Task
+    const taskCount = await this.dataSource
+      .getRepository(Task)
+      .createQueryBuilder('task')
+      .where('task.createdBy = :userId', { userId })
+      .andWhere('task.isDeleted = false')
+      .getCount();
+
+    if (taskCount > 0) {
+      references.push(`${taskCount} task(s) created by this user`);
+    }
+
+    // Skill
+    const skillCount = await this.dataSource
+      .getRepository(Skill)
+      .createQueryBuilder('skill')
+      .where('skill.createdBy = :userId', { userId })
+      .andWhere('skill.isDeleted = false')
+      .getCount();
+
+    if (skillCount > 0) {
+      references.push(`${skillCount} skill(s) created by this user`);
+    }
+
+    // Assignment
+    const assignmentCount = await this.dataSource
+      .getRepository(Assignment)
+      .createQueryBuilder('assignment')
+      .where('assignment.createdBy = :userId', { userId })
+      .andWhere('assignment.isDeleted = false')
+      .getCount();
+
+    if (assignmentCount > 0) {
+      references.push(`${assignmentCount} assignment(s) created by this user`);
+    }
+
+    // Total
+    if (references.length > 0) {
+      throw new BadRequestException(
+        `Cannot delete user. It is being used in: ${references.join(', ')}. Please remove the user from these entities first.`,
+      );
     }
   }
 }
