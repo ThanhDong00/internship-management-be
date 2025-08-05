@@ -114,8 +114,7 @@ export class AssignmentsController {
       required: ['status'],
     },
   })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('intern')
+  @UseGuards(JwtAuthGuard)
   @Put(':id/status')
   async updateStatus(
     @Param('id') id: string,
@@ -167,6 +166,14 @@ export class AssignmentsController {
     return this.assignmentsService.review(id, user, payLoad);
   }
 
+  @ApiOperation({ summary: 'Restore a deleted assignment' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Put(':id/restore')
+  async restore(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return this.assignmentsService.restore(id, user);
+  }
+
   @ApiOperation({ summary: 'Update an assignment' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
@@ -184,6 +191,6 @@ export class AssignmentsController {
   @Roles('admin', 'mentor')
   @Delete(':id')
   async delete(@Param('id') id: string, @User() user: SimpleUserDto) {
-    return this.assignmentsService.delete(id, user);
+    return this.assignmentsService.softDelete(id, user);
   }
 }

@@ -452,7 +452,110 @@ export class AssignmentsService {
     }
   }
 
-  async delete(id: string, user: SimpleUserDto) {
-    return 'Assignment deletion is not implemented';
+  async softDelete(id: string, user: SimpleUserDto): Promise<void> {
+    try {
+      const whereCondition: any = {
+        id: id,
+        isDeleted: false,
+      };
+
+      if (user.role !== 'admin') {
+        whereCondition.createdBy = user.id;
+      }
+
+      const assignment = await this.assignmentRepository.findOne({
+        where: whereCondition,
+      });
+
+      if (!assignment) throw new NotFoundException('Assignment not found');
+
+      await this.checkAssignmentReferences(assignment);
+
+      await this.assignmentRepository.update(id, { isDeleted: true });
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error deleting assignment: ' + error.message,
+      );
+    }
+  }
+
+  private async checkAssignmentReferences(
+    assignment: Assignment,
+  ): Promise<void> {
+    const references: string[] = [];
+
+    // Không cho phép xóa assignment đã submit
+    if (assignment.status === 'Submitted') {
+      references.push('Assignment has been submitted');
+    }
+
+    // Không cho phép xóa assignment đã review
+    if (assignment.status === 'Reviewed') {
+      references.push('Assignment has been reviewed');
+    }
+
+    // Không cho phép xóa assignment đang được làm
+    if (assignment.status === 'InProgress') {
+      references.push('Assignment is currently in progress');
+    }
+
+    if (references.length > 0) {
+      throw new BadRequestException(
+        `Cannot delete assignment. Reasons: ${references.join(', ')}.`,
+      );
+    }
+  }
+
+  async restore(id: string, user: SimpleUserDto): Promise<AssignmentDto> {
+    try {
+      const whereCondition: any = {
+        id: id,
+        isDeleted: true,
+      };
+
+      if (user.role !== 'admin') {
+        whereCondition.createdBy = user.id;
+      }
+
+      const assignment = await this.assignmentRepository.findOne({
+        where: whereCondition,
+      });
+
+      if (!assignment) {
+        throw new NotFoundException('Deleted assignment not found');
+      }
+
+      await this.assignmentRepository.update(id, { isDeleted: false });
+
+      const restoredAssignment = await this.assignmentRepository
+        .createQueryBuilder('assignment')
+        .where('assignment.id = :id', { id })
+        .andWhere('assignment.isDeleted = false')
+        .getOne();
+
+      if (!restoredAssignment) {
+        throw new NotFoundException('Restored assignment not found');
+      }
+
+      return plainToInstance(AssignmentDto, restoredAssignment, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error restoring assignment',
+        error.message,
+      );
+    }
   }
 }
