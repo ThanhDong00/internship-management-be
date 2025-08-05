@@ -9,6 +9,9 @@ import {
   MentorInternsCountResponse,
   MonthlyInternsCountResponse,
 } from './dto/dashboard-data.dto';
+import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
+import { plainToInstance } from 'class-transformer';
+import { InternInformationDto } from 'src/interns-information/dto/intern-information.dto';
 
 @Injectable()
 export class DashboardService {
@@ -158,6 +161,42 @@ export class DashboardService {
     } catch (error) {
       throw new InternalServerErrorException(
         'Error fetching admin dashboard summary: ' + error.message,
+      );
+    }
+  }
+
+  async getMentorDashboardSummary(user: SimpleUserDto): Promise<any> {
+    try {
+      const internsOfUser = await this.internInfoRepository
+        .createQueryBuilder('internsInfo')
+        .leftJoinAndSelect('internsInfo.intern', 'intern')
+        .where('internsInfo.mentorId = :mentorId', { mentorId: user.id })
+        .getMany();
+
+      const myInterns = plainToInstance(InternInformationDto, internsOfUser, {
+        excludeExtraneousValues: true,
+      });
+
+      const internsOfUserCount: any = {
+        total: internsOfUser.length,
+        completed: internsOfUser.filter(
+          (intern) => intern.status === 'Completed',
+        ).length,
+        inProgress: internsOfUser.filter(
+          (intern) => intern.status === 'InProgress',
+        ).length,
+        onboarding: internsOfUser.filter(
+          (intern) => intern.status === 'Onboarding',
+        ).length,
+      };
+
+      return {
+        myInterns,
+        internsOfUserCount,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error fetching mentor dashboard summary: ' + error.message,
       );
     }
   }
