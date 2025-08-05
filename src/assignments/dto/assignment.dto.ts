@@ -25,6 +25,10 @@ export class AssignmentDto {
   createdBy: string;
 
   @Expose()
+  @Type(() => UserDto)
+  creator: UserDto;
+
+  @Expose()
   assignedTo?: string;
 
   @Expose()

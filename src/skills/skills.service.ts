@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -8,15 +9,20 @@ import { CreateSkillDto } from './dto/create-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Skill } from './entities/skill.entity';
-import { Not, Repository } from 'typeorm';
+import { DataSource, Not, Repository } from 'typeorm';
 import { SkillDto } from './dto/skill.dto';
 import { plainToInstance } from 'class-transformer';
+import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
+import { AssignmentSkill } from 'src/assignments/entities/assignment-skill.entity';
+import { TrainingPlanSkill } from 'src/training-plans/entities/training-plan-skill.entity';
 
 @Injectable()
 export class SkillsService {
   constructor(
     @InjectRepository(Skill)
     private readonly skillRepository: Repository<Skill>,
+
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(
@@ -67,12 +73,6 @@ export class SkillsService {
     }
   }
 
-  /**
-   * Finds a skill by its ID. If the user is an admin, it returns the skill regardless of who created it.
-   * @param id - id of the skill to find
-   * @param user - user object containing role and id
-   * @returns SkillDto or null if not found
-   */
   async findOne(id: string, user: any): Promise<SkillDto> {
     try {
       const whereCondition: any = {
@@ -166,7 +166,165 @@ export class SkillsService {
     }
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} skill`;
+  async softDelete(id: string, user: SimpleUserDto): Promise<void> {
+    try {
+      const whereCondition: any = {
+        id: id,
+        isDeleted: false,
+      };
+
+      const skill = await this.skillRepository.findOne({
+        where: whereCondition,
+      });
+
+      if (!skill) {
+        throw new NotFoundException(`Skill with ID ${id} not found`);
+      }
+
+      if (user.role !== 'admin' && user.id !== skill.createdBy) {
+        throw new ForbiddenException(
+          `You are not the owner of this skill or the admin`,
+        );
+      }
+
+      await this.checkSkillReferences(id);
+
+      await this.skillRepository.update(id, { isDeleted: true });
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error soft deleting skill: ' + error.message,
+      );
+    }
+  }
+
+  private async checkSkillReferences(skillId: string): Promise<void> {
+    const references: string[] = [];
+
+    const assignmentSkillCount = await this.dataSource
+      .getRepository(AssignmentSkill)
+      .createQueryBuilder('assignmentSkill')
+      .leftJoin('assignmentSkill.assignment', 'assignment')
+      .where('assignmentSkill.skillId = :skillId', { skillId })
+      .andWhere('assignment.isDeleted = false')
+      .getCount();
+
+    if (assignmentSkillCount > 0) {
+      references.push(`${assignmentSkillCount} assignment(s)`);
+    }
+
+    const trainingPlanSkillCount = await this.dataSource
+      .getRepository(TrainingPlanSkill)
+      .createQueryBuilder('trainingPlanSkill')
+      .leftJoin('trainingPlanSkill.plan', 'plan')
+      .where('trainingPlanSkill.skillId = :skillId', { skillId })
+      .andWhere('plan.isDeleted = false')
+      .getCount();
+
+    if (trainingPlanSkillCount > 0) {
+      references.push(`${trainingPlanSkillCount} training plan(s)`);
+    }
+
+    if (references.length > 0) {
+      throw new BadRequestException(
+        `Cannot delete skill. It is being used in: ${references.join(', ')}. Please remove the skill from these entities first.`,
+      );
+    }
+  }
+
+  async restore(id: string, user: SimpleUserDto): Promise<SkillDto> {
+    try {
+      const whereCondition: any = {
+        id: id,
+        isDeleted: true,
+      };
+
+      if (user.role !== 'admin') {
+        whereCondition.createdBy = user.id;
+      }
+
+      const skill = await this.skillRepository.findOne({
+        where: whereCondition,
+      });
+
+      if (!skill) {
+        throw new NotFoundException('Deleted skill not found');
+      }
+
+      await this.skillRepository.update(id, { isDeleted: false });
+
+      const restoredSkill = await this.skillRepository.findOne({
+        where: { id, isDeleted: false },
+      });
+
+      return plainToInstance(SkillDto, restoredSkill);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error restoring skill: ' + error.message,
+      );
+    }
+  }
+
+  async getSkillUsage(id: string, user: SimpleUserDto): Promise<any> {
+    try {
+      const whereCondition: any = {
+        id: id,
+        isDeleted: false,
+      };
+
+      if (user.role !== 'admin') {
+        whereCondition.createdBy = user.id;
+      }
+
+      const skill = await this.skillRepository.findOne({
+        where: whereCondition,
+      });
+
+      if (!skill) {
+        throw new NotFoundException('Skill not found');
+      }
+
+      // Lấy chi tiết usage
+      const assignmentUsage = await this.dataSource
+        .getRepository('AssignmentSkill')
+        .createQueryBuilder('assignmentSkill')
+        .leftJoin('assignmentSkill.assignment', 'assignment')
+        .leftJoin('assignment.task', 'task')
+        .where('assignmentSkill.skillId = :skillId', { skillId: id })
+        .andWhere('assignment.isDeleted = false')
+        .select(['assignment.id', 'task.name as taskName'])
+        .getRawMany();
+
+      const trainingPlanUsage = await this.dataSource
+        .getRepository('TrainingPlanSkill')
+        .createQueryBuilder('trainingPlanSkill')
+        .leftJoin('trainingPlanSkill.plan', 'plan')
+        .where('trainingPlanSkill.skillId = :skillId', { skillId: id })
+        .andWhere('plan.isDeleted = false')
+        .select(['plan.id', 'plan.name'])
+        .getRawMany();
+
+      return {
+        assignments: assignmentUsage,
+        trainingPlans: trainingPlanUsage,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error getting skill usage: ' + error.message,
+      );
+    }
   }
 }

@@ -42,6 +42,10 @@ export class Assignment {
   @Column({ nullable: false })
   createdBy: string;
 
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'createdBy' })
+  creator: User;
+
   @Column({ nullable: true, type: 'uuid' })
   assignedTo: string;
 

@@ -86,6 +86,7 @@ export class InternsInformationService {
           },
         )
         .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.creator', 'assignmentCreator')
         .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
         .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
         .leftJoinAndSelect('internInfo.mentor', 'mentor')

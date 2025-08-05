@@ -16,6 +16,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/auth/decorators/user.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 
 @ApiTags('skills')
 @ApiBearerAuth()
@@ -67,9 +68,19 @@ export class SkillsController {
     return await this.skillsService.update(id, updateSkillDto, user);
   }
 
-  @ApiOperation({ summary: 'Delete a skill by ID, not implemented' })
+  @ApiOperation({ summary: 'Delete a skill by ID' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.skillsService.remove(id);
+  async softDelete(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return this.skillsService.softDelete(id, user);
+  }
+
+  @ApiOperation({ summary: 'Restore deleted skill by Id' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor')
+  @Post(':id/restore')
+  async restore(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return this.skillsService.restore(id, user);
   }
 }
