@@ -465,13 +465,20 @@ export class AssignmentsService {
 
       const assignment = await this.assignmentRepository.findOne({
         where: whereCondition,
+        relations: ['skills', 'trainingPlan'],
       });
 
       if (!assignment) throw new NotFoundException('Assignment not found');
 
       await this.checkAssignmentReferences(assignment);
 
-      await this.assignmentRepository.update(id, { isDeleted: true });
+      await this.dataSource.transaction(async (manager) => {
+        await manager.update(Assignment, id, { isDeleted: true });
+
+        await manager.delete(AssignmentSkill, {
+          assignmentId: id,
+        });
+      });
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -504,6 +511,10 @@ export class AssignmentsService {
     // Không cho phép xóa assignment đang được làm
     if (assignment.status === 'InProgress') {
       references.push('Assignment is currently in progress');
+    }
+
+    if (assignment.trainingPlan && assignment.trainingPlan.isDeleted) {
+      references.push('Cannot delete assignment from a deleted training plan');
     }
 
     if (references.length > 0) {
