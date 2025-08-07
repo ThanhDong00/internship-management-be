@@ -313,10 +313,7 @@ export class TrainingPlansService {
   ): Promise<TrainingPlanDto> {
     try {
       const existingTrainingPlan = await this.trainingPlanRepository.findOne({
-        where: {
-          id,
-          isDeleted: false,
-        },
+        where: { id, isDeleted: false },
       });
 
       if (!existingTrainingPlan) {
@@ -341,10 +338,6 @@ export class TrainingPlansService {
 
       const updatedTrainingPlanId = await this.dataSource.transaction(
         async (manager) => {
-          if (!existingTrainingPlan.id) {
-            throw new BadRequestException('Training plan ID is missing');
-          }
-
           Object.assign(existingTrainingPlan, updatePlanData);
           await manager.save(TrainingPlan, existingTrainingPlan);
 
@@ -366,9 +359,8 @@ export class TrainingPlansService {
           // Maybe bug here
           // Update Assignments if provided
           if (assignments && assignments.length > 0) {
-            // Delete all existing assignments and their skills for this plan
             const existingAssignments = await manager.find(Assignment, {
-              where: { planId: existingTrainingPlan.id },
+              where: { planId: existingTrainingPlan.id, isAssigned: false },
             });
 
             if (existingAssignments.length > 0) {
@@ -428,12 +420,6 @@ export class TrainingPlansService {
         updatedTrainingPlanId,
         user,
       );
-
-      if (!updatedTrainingPlan) {
-        throw new NotFoundException(
-          `Error when updating: Training plan ${updatedTrainingPlanId} not found`,
-        );
-      }
 
       return updatedTrainingPlan;
     } catch (error) {
