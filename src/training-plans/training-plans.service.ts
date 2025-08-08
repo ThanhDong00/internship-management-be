@@ -21,6 +21,7 @@ import { InternInformation } from 'src/interns-information/entities/intern-infor
 import { InternsInformationService } from 'src/interns-information/interns-information.service';
 import { InternInformationDto } from 'src/interns-information/dto/intern-information.dto';
 import { User } from 'src/users/entities/user.entity';
+import puppeteer from 'puppeteer';
 
 @Injectable()
 export class TrainingPlansService {
@@ -74,7 +75,7 @@ export class TrainingPlansService {
         .leftJoinAndSelect(
           'plan.assignments',
           'assignment',
-          'assignment.isAssigned = false',
+          'assignment.isAssigned = false AND assignment.isDeleted = false',
         )
         .leftJoinAndSelect('assignment.task', 'task')
         .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
@@ -705,6 +706,61 @@ export class TrainingPlansService {
       }
       throw new InternalServerErrorException(
         'Error restoring training plan: ' + error.message,
+      );
+    }
+  }
+
+  async exportToPdf(link: string, user: SimpleUserDto): Promise<Buffer> {
+    let browser;
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+        ],
+      });
+
+      const page = await browser.newPage();
+
+      await page.goto(link, { waitUntil: 'networkidle0' });
+
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px',
+        },
+      });
+
+      await browser.close();
+      return pdfBuffer;
+    } catch (error) {
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeError) {
+          console.error('Error closing browser:', closeError);
+        }
+      }
+
+      // More specific error handling
+      if (error.name === 'TimeoutError') {
+        throw new InternalServerErrorException(
+          'Timeout while loading page for PDF export',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'Error exporting training plan to PDF: ' + error.message,
       );
     }
   }

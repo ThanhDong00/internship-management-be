@@ -75,6 +75,14 @@ export class TrainingPlansController {
     return await this.trainingPlansService.findPlansWithInterns(user);
   }
 
+  @ApiOperation({ summary: 'Export a training plan to PDF' })
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles('admin', 'mentor')
+  @Get(':id/export')
+  async exportToPdf(@Param('id') id: string, @User() user: SimpleUserDto) {
+    return this.trainingPlansService.exportToPdf(id, user);
+  }
+
   @ApiOperation({ summary: 'Get a training plan by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
