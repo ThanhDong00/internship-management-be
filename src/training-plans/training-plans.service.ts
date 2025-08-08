@@ -470,6 +470,7 @@ export class TrainingPlansService {
         // Assign planId and mentorId to the intern's information
         internsInfo.planId = id;
         internsInfo.mentorId = trainingPlan.createdBy;
+        internsInfo.status = 'InProgress';
         await manager.save(InternInformation, internsInfo);
 
         // Change isAssigned in User entity to true
