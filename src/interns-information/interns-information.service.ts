@@ -14,6 +14,17 @@ import { UpdateInternInformationDto } from './dto/update-intern-information.dto'
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 import { Cron } from '@nestjs/schedule';
 
+export interface findOneInternResponse {
+  internInformation: InternInformationDto;
+  countAssignments: {
+    total: number;
+    todo: number;
+    inProgress: number;
+    submitted: number;
+    reviewed: number;
+  };
+}
+
 @Injectable()
 export class InternsInformationService {
   constructor(
@@ -71,7 +82,7 @@ export class InternsInformationService {
     }
   }
 
-  async findOneForIntern(user: SimpleUserDto): Promise<InternInformationDto> {
+  async findOneForIntern(user: SimpleUserDto): Promise<findOneInternResponse> {
     try {
       const plan = await this.internInfoRepo
         .createQueryBuilder('internInfo')
@@ -98,9 +109,30 @@ export class InternsInformationService {
         throw new NotFoundException(`Training plan not found for intern`);
       }
 
-      return plainToInstance(InternInformationDto, plan, {
+      const internInformationDto = plainToInstance(InternInformationDto, plan, {
         excludeExtraneousValues: true,
       });
+
+      const countAssignments = {
+        total: plan.plan.assignments.length,
+        todo: plan.plan.assignments.filter(
+          (assignment) => assignment.status === 'Todo',
+        ).length,
+        inProgress: plan.plan.assignments.filter(
+          (assignment) => assignment.status === 'InProgress',
+        ).length,
+        submitted: plan.plan.assignments.filter(
+          (assignment) => assignment.status === 'Submitted',
+        ).length,
+        reviewed: plan.plan.assignments.filter(
+          (assignment) => assignment.status === 'Reviewed',
+        ).length,
+      };
+
+      return {
+        internInformation: internInformationDto,
+        countAssignments: countAssignments,
+      };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
