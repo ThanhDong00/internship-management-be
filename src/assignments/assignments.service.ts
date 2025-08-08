@@ -272,10 +272,17 @@ export class AssignmentsService {
         throw new BadRequestException('Status is required');
       }
 
-      if (user.role === 'intern' && status === 'Reviewed') {
-        throw new ForbiddenException(
-          'Only mentors can change the status to Reviewed',
-        );
+      if (user.role === 'intern') {
+        if (status === 'Reviewed') {
+          throw new ForbiddenException(
+            'Only mentors can change the status to Reviewed',
+          );
+        }
+        if (assignment.status === 'Reviewed') {
+          throw new ForbiddenException(
+            'Only mentors can change the status from Reviewed',
+          );
+        }
       }
 
       assignment.status = status;
