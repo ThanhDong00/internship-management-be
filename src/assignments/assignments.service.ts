@@ -325,7 +325,7 @@ export class AssignmentsService {
 
       assignment.submittedAt = new Date();
       assignment.submittedLink = data;
-      assignment.status = 'Submitted';
+      // assignment.status = 'Submitted';
 
       await this.assignmentRepository.save(assignment);
 
@@ -368,7 +368,7 @@ export class AssignmentsService {
       }
 
       assignment.feedback = data;
-      assignment.status = 'Reviewed';
+      // assignment.status = 'Reviewed';
 
       await this.assignmentRepository.save(assignment);
 
