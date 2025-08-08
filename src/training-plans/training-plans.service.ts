@@ -483,7 +483,7 @@ export class TrainingPlansService {
 
         // change Assignment's assignedTo to the internId
         const assignmentsToUpdate = await manager.find(Assignment, {
-          where: { planId: id },
+          where: { planId: id, isAssigned: false },
         });
 
         // Duplicate assignments for the new intern
