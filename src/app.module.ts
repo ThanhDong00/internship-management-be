@@ -3,6 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { SkillsModule } from './skills/skills.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -27,6 +28,7 @@ import 'dotenv/config';
         rejectUnauthorized: false,
       },
     }),
+    ScheduleModule.forRoot(),
     SkillsModule,
     UsersModule,
     AuthModule,

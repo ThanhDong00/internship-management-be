@@ -54,7 +54,10 @@ export class InternsInformationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Put(':id/status')
-  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
+  async updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: 'Completed' | 'InProgress' | 'Dropped',
+  ) {
     return await this.internsInformationService.updateStatus(id, status);
   }
 

@@ -12,6 +12,7 @@ import { InternInformationDto } from './dto/intern-information.dto';
 import { plainToInstance } from 'class-transformer';
 import { UpdateInternInformationDto } from './dto/update-intern-information.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class InternsInformationService {
@@ -122,7 +123,7 @@ export class InternsInformationService {
 
   async updateStatus(
     id: string,
-    status: string,
+    status: 'Completed' | 'InProgress' | 'Dropped',
   ): Promise<InternInformationDto> {
     try {
       const internInfo = await this.internInfoRepo.findOne({
@@ -247,6 +248,41 @@ export class InternsInformationService {
       throw new InternalServerErrorException(
         'Error updating intern information: ' + error.message,
       );
+    }
+  }
+
+  @Cron('0 0 1 * * *')
+  async handleCronUpdateStatus(): Promise<void> {
+    const today = new Date();
+
+    const interns = await this.internInfoRepo
+      .createQueryBuilder('interns')
+      .where('interns.status IN (:...statuses)', {
+        statuses: ['Onboarding', 'InProgress'],
+      })
+      .andWhere('interns.endDate <= :today', { today })
+      .leftJoinAndSelect('interns.plan', 'plan')
+      .leftJoinAndSelect(
+        'plan.assignments',
+        'assignments',
+        'assignments.assignedTo = interns.internId',
+      )
+      .getMany();
+
+    // Check if all assignments are 'Submitted' or 'Reviewed'
+    for (const intern of interns) {
+      const allAssignmentsSubmittedOrReviewed = intern.plan.assignments.every(
+        (assignment) =>
+          assignment.status === 'Submitted' || assignment.status === 'Reviewed',
+      );
+
+      if (allAssignmentsSubmittedOrReviewed) {
+        intern.status = 'Completed';
+      } else {
+        intern.status = 'Dropped';
+      }
+
+      await this.internInfoRepo.save(intern);
     }
   }
 }

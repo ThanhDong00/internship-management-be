@@ -46,7 +46,7 @@ export class InternInformation {
   endDate: Date;
 
   @Column('enum', {
-    enum: ['Onboarding', 'InProgress', 'Completed'],
+    enum: ['Onboarding', 'InProgress', 'Completed', 'Dropped'],
     default: 'Onboarding',
   })
   status: string;
