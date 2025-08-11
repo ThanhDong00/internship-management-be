@@ -23,7 +23,7 @@ import { InternInformationDto } from 'src/interns-information/dto/intern-informa
 import { User } from 'src/users/entities/user.entity';
 // import chromium from 'chrome-aws-lambda';
 import chromium from '@sparticuz/chromium';
-import puppeteer from 'puppeteer-core';
+import puppeteer, { Browser } from 'puppeteer-core';
 
 @Injectable()
 export class TrainingPlansService {
@@ -712,10 +712,20 @@ export class TrainingPlansService {
     }
   }
 
-  async exportToPdf(link: string): Promise<Buffer> {
-    let browser;
-
+  async exportToPdf(
+    link: string,
+    internId: string,
+    user: SimpleUserDto,
+  ): Promise<Buffer> {
+    let browser: Browser | null = null;
     try {
+      const canExport = await this.checkExportPermissions(internId, user);
+      if (!canExport) {
+        throw new ForbiddenException(
+          'You do not have permission to export this training plan',
+        );
+      }
+
       const isProduction = process.env.NODE_ENV === 'production';
 
       browser = await puppeteer.launch({
@@ -769,19 +779,39 @@ export class TrainingPlansService {
       });
 
       await browser.close();
-      return pdfBuffer;
+      return Buffer.from(pdfBuffer);
     } catch (error) {
-      if (browser) {
+      if (error instanceof ForbiddenException) throw error;
+
+      throw new InternalServerErrorException(
+        'Error exporting training plan to PDF: ' + error.message,
+      );
+    } finally {
+      if (browser !== null) {
         try {
           await browser.close();
         } catch (closeError) {
           console.error('Error closing browser:', closeError);
         }
       }
-
-      throw new InternalServerErrorException(
-        'Error exporting training plan to PDF: ' + error.message,
-      );
     }
+  }
+
+  private async checkExportPermissions(
+    internId: string,
+    user: SimpleUserDto,
+  ): Promise<boolean> {
+    if (user.role === 'intern' && user.id !== internId) {
+      return false;
+    }
+
+    if (user.role === 'mentor') {
+      const internInfo = await this.internInformationRepository.findOne({
+        where: { internId: internId, mentorId: user.id, isDeleted: false },
+      });
+      return !!internInfo;
+    }
+
+    return true;
   }
 }

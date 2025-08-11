@@ -48,6 +48,10 @@ export class TrainingPlansController {
     );
   }
 
+  /**
+   * GET ROUTES
+   */
+
   @ApiOperation({
     summary: 'Get all training plans for the authenticated user',
   })
@@ -66,14 +70,6 @@ export class TrainingPlansController {
     return this.trainingPlansService.findAll();
   }
 
-  // @ApiOperation({ summary: 'Get training plans for Interns' })
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles('intern')
-  // @Get('interns')
-  // async findPlansForInterns(@User() user: SimpleUserDto) {
-  //   return await this.trainingPlansService.findPlansForInterns(user);
-  // }
-
   @ApiOperation({ summary: 'Get all training plans with interns' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
@@ -82,25 +78,38 @@ export class TrainingPlansController {
     return await this.trainingPlansService.findPlansWithInterns(user);
   }
 
-  @ApiOperation({ summary: 'Export a training plan to PDF' })
-  @ApiQuery({ name: 'link', required: false })
+  // @ApiOperation({ summary: 'Get training plans for Interns' })
   // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles('admin', 'mentor')
-  @Get(':id/export')
+  // @Roles('intern')
+  // @Get('interns')
+  // async findPlansForInterns(@User() user: SimpleUserDto) {
+  //   return await this.trainingPlansService.findPlansForInterns(user);
+  // }
+
+  @ApiOperation({ summary: 'Export a training plan to PDF using InternId' })
+  @ApiQuery({ name: 'link', required: false })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor', 'intern')
+  @Get(':internId/export')
   async exportToPdf(
-    @Param('id') id: string,
     @Res() res: Response,
+    @Param('internId') internId: string,
     @Query('link') link: string,
+    @User() user: SimpleUserDto,
   ) {
     if (!link) {
       throw new BadRequestException('Link is required');
     }
 
-    const pdfBuffer = await this.trainingPlansService.exportToPdf(link);
+    const pdfBuffer = await this.trainingPlansService.exportToPdf(
+      link,
+      internId,
+      user,
+    );
 
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="training-plan-${id}.pdf"`,
+      'Content-Disposition': `attachment; filename="training-plan-${internId}.pdf"`,
       'Content-Length': pdfBuffer.length,
     });
 
@@ -114,6 +123,10 @@ export class TrainingPlansController {
   async findOne(@Param('id') id: string, @User() user: SimpleUserDto) {
     return await this.trainingPlansService.findOne(id, user);
   }
+
+  /**
+   * PUT ROUTES
+   */
 
   @ApiOperation({ summary: 'Assign a training plan to an intern' })
   @ApiBody({
@@ -159,6 +172,10 @@ export class TrainingPlansController {
   ) {
     return this.trainingPlansService.update(id, updateTrainingPlanDto, user);
   }
+
+  /**
+   * DELETE ROUTES
+   */
 
   @ApiOperation({ summary: 'Delete a training plan with Id' })
   @UseGuards(JwtAuthGuard, RolesGuard)
