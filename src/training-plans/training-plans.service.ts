@@ -710,10 +710,12 @@ export class TrainingPlansService {
     }
   }
 
-  async exportToPdf(link: string, user: SimpleUserDto): Promise<Buffer> {
+  async exportToPdf(link: string): Promise<Buffer> {
     let browser;
     try {
       browser = await puppeteer.launch({
+        executablePath:
+          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
         headless: true,
         args: [
           '--no-sandbox',
@@ -724,11 +726,12 @@ export class TrainingPlansService {
           '--no-zygote',
           '--single-process',
         ],
+        timeout: 60000,
       });
 
       const page = await browser.newPage();
 
-      await page.goto(link, { waitUntil: 'networkidle0' });
+      await page.goto(link, { waitUntil: 'networkidle2', timeout: 30000 });
 
       const pdfBuffer = await page.pdf({
         format: 'A4',

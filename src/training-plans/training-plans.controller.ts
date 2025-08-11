@@ -4,11 +4,11 @@ import {
   Controller,
   Delete,
   Get,
-  InternalServerErrorException,
-  NotFoundException,
   Param,
   Post,
   Put,
+  Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { TrainingPlansService } from './training-plans.service';
@@ -19,7 +19,14 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
+import { Response } from 'express';
 
 @ApiTags('training-plans')
 @ApiBearerAuth()
@@ -76,11 +83,28 @@ export class TrainingPlansController {
   }
 
   @ApiOperation({ summary: 'Export a training plan to PDF' })
+  @ApiQuery({ name: 'link', required: false })
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles('admin', 'mentor')
   @Get(':id/export')
-  async exportToPdf(@Param('id') id: string, @User() user: SimpleUserDto) {
-    return this.trainingPlansService.exportToPdf(id, user);
+  async exportToPdf(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @Query('link') link: string,
+  ) {
+    if (!link) {
+      throw new BadRequestException('Link is required');
+    }
+
+    const pdfBuffer = await this.trainingPlansService.exportToPdf(link);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="training-plan-${id}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    return res.end(pdfBuffer);
   }
 
   @ApiOperation({ summary: 'Get a training plan by ID' })
