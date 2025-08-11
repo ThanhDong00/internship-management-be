@@ -21,7 +21,8 @@ import { InternInformation } from 'src/interns-information/entities/intern-infor
 import { InternsInformationService } from 'src/interns-information/interns-information.service';
 import { InternInformationDto } from 'src/interns-information/dto/intern-information.dto';
 import { User } from 'src/users/entities/user.entity';
-import chromium from 'chrome-aws-lambda';
+// import chromium from 'chrome-aws-lambda';
+import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
 @Injectable()
@@ -737,13 +738,19 @@ export class TrainingPlansService {
               '--disable-gpu',
               '--no-first-run',
             ],
-        defaultViewport: isProduction
-          ? chromium.defaultViewport
-          : { width: 1200, height: 800 },
+        // defaultViewport: isProduction
+        //   ? chromium.defaultViewport
+        //   : { width: 1200, height: 800 },
+        // executablePath: isProduction
+        //   ? await chromium.executablePath()
+        //   : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        // headless: isProduction ? chromium.headless : true,
+        // timeout: 60000,
+        defaultViewport: { width: 1200, height: 800 },
+        headless: true,
         executablePath: isProduction
-          ? await chromium.executablePath
+          ? await chromium.executablePath()
           : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        headless: isProduction ? chromium.headless : true,
         timeout: 60000,
       });
 
