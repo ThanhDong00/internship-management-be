@@ -103,6 +103,7 @@ export class InternsInformationService {
         .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
         .leftJoinAndSelect('internInfo.mentor', 'mentor')
         .where('internInfo.internId = :internId', { internId: user.id })
+        .andWhere('internInfo.isDeleted = false')
         .getOne();
 
       if (!plan) {
@@ -151,6 +152,66 @@ export class InternsInformationService {
         isDeleted: false,
       },
     });
+  }
+
+  async findOneByInternId(
+    internId: string,
+    user: SimpleUserDto,
+  ): Promise<InternInformationDto> {
+    try {
+      if (user.role === 'intern' && user.id !== internId) {
+        throw new ForbiddenException(
+          'You do not have permission to access this intern information',
+        );
+      }
+
+      const internInformation = await this.internInfoRepo
+        .createQueryBuilder('internInfo')
+        .leftJoinAndSelect('internInfo.plan', 'plan')
+        .leftJoinAndSelect('plan.skills', 'planSkill')
+        .leftJoinAndSelect('planSkill.skill', 'skill')
+        .leftJoinAndSelect(
+          'plan.assignments',
+          'assignment',
+          'assignment.isAssigned = true AND assignment.assignedTo = :internId',
+          {
+            internId: internId,
+          },
+        )
+        .leftJoinAndSelect('assignment.task', 'task')
+        .leftJoinAndSelect('assignment.creator', 'assignmentCreator')
+        .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
+        .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
+        .leftJoinAndSelect('internInfo.mentor', 'mentor')
+        .where('internInfo.internId = :internId', { internId: internId })
+        .andWhere('internInfo.isDeleted = false')
+        .getOne();
+
+      if (!internInformation) {
+        throw new NotFoundException(`Training plan not found for intern`);
+      }
+
+      if (user.role === 'mentor' && user.id !== internInformation.mentorId) {
+        throw new ForbiddenException(
+          'You do not have permission to access this intern information',
+        );
+      }
+
+      return plainToInstance(InternInformationDto, internInformation, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        `Error fetching training plan for intern: ${error.message}`,
+      );
+    }
   }
 
   async updateStatus(

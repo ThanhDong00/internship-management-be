@@ -26,6 +26,7 @@ export class InternsInformationController {
     private readonly internsInformationService: InternsInformationService,
   ) {}
 
+  /** GET ROUTES */
   @ApiOperation({ summary: 'Get all interns information' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
@@ -42,6 +43,20 @@ export class InternsInformationController {
     return await this.internsInformationService.findOneForIntern(user);
   }
 
+  @ApiOperation({ summary: 'Get Intern Information by InternId' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'mentor', 'intern')
+  @Get('interns/:internId')
+  async findOneByInternId(
+    @Param('internId') internId: string,
+    @User() user: SimpleUserDto,
+  ) {
+    return await this.internsInformationService.findOneByInternId(
+      internId,
+      user,
+    );
+  }
+
   @ApiOperation({ summary: 'Get intern information by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin') // Not sure
@@ -50,6 +65,7 @@ export class InternsInformationController {
     return await this.internsInformationService.findOne(id);
   }
 
+  /** PUT ROUTES */
   @ApiOperation({ summary: 'Update intern status by ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')

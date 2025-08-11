@@ -738,14 +738,6 @@ export class TrainingPlansService {
               '--disable-gpu',
               '--no-first-run',
             ],
-        // defaultViewport: isProduction
-        //   ? chromium.defaultViewport
-        //   : { width: 1200, height: 800 },
-        // executablePath: isProduction
-        //   ? await chromium.executablePath()
-        //   : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        // headless: isProduction ? chromium.headless : true,
-        // timeout: 60000,
         defaultViewport: { width: 1200, height: 800 },
         headless: true,
         executablePath: isProduction
