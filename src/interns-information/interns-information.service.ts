@@ -183,6 +183,7 @@ export class InternsInformationService {
         .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
         .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
         .leftJoinAndSelect('internInfo.mentor', 'mentor')
+        .leftJoinAndSelect('internInfo.intern', 'intern')
         .where('internInfo.internId = :internId', { internId: internId })
         .andWhere('internInfo.isDeleted = false')
         .getOne();
