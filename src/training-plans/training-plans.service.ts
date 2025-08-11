@@ -21,7 +21,8 @@ import { InternInformation } from 'src/interns-information/entities/intern-infor
 import { InternsInformationService } from 'src/interns-information/interns-information.service';
 import { InternInformationDto } from 'src/interns-information/dto/intern-information.dto';
 import { User } from 'src/users/entities/user.entity';
-import puppeteer from 'puppeteer';
+import chromium from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 
 @Injectable()
 export class TrainingPlansService {
@@ -712,26 +713,50 @@ export class TrainingPlansService {
 
   async exportToPdf(link: string): Promise<Buffer> {
     let browser;
+
     try {
+      const isProduction = process.env.NODE_ENV === 'production';
+
       browser = await puppeteer.launch({
-        // executablePath:
-        //   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-        ],
+        args: isProduction
+          ? chromium.args.concat([
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-gpu',
+              '--no-first-run',
+              '--no-zygote',
+              '--single-process',
+              '--disable-web-security',
+              '--font-render-hinting=none',
+            ])
+          : [
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-dev-shm-usage',
+              '--disable-gpu',
+              '--no-first-run',
+            ],
+        defaultViewport: isProduction
+          ? chromium.defaultViewport
+          : { width: 1200, height: 800 },
+        executablePath: isProduction
+          ? await chromium.executablePath
+          : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        headless: isProduction ? chromium.headless : true,
         timeout: 60000,
       });
 
       const page = await browser.newPage();
-
-      await page.goto(link, { waitUntil: 'networkidle2', timeout: 30000 });
+      await page.setViewport({
+        width: 1200,
+        height: 800,
+        deviceScaleFactor: 1,
+      });
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      );
+      await page.goto(link, { waitUntil: 'networkidle0', timeout: 30000 });
 
       const pdfBuffer = await page.pdf({
         format: 'A4',
@@ -753,13 +778,6 @@ export class TrainingPlansService {
         } catch (closeError) {
           console.error('Error closing browser:', closeError);
         }
-      }
-
-      // More specific error handling
-      if (error.name === 'TimeoutError') {
-        throw new InternalServerErrorException(
-          'Timeout while loading page for PDF export',
-        );
       }
 
       throw new InternalServerErrorException(
