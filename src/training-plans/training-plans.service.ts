@@ -362,7 +362,7 @@ export class TrainingPlansService {
             // );
             // await manager.save(TrainingPlanSkill, trainingPlanSkills);
             const currentSkillIds = existingTrainingPlan.skills.map(
-              (skill) => skill.id,
+              (skill) => skill.skillId,
             );
             const skillsToAdd = skills.filter(
               (id) => !currentSkillIds.includes(id),

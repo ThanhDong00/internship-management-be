@@ -440,7 +440,9 @@ export class AssignmentsService {
         // }
 
         if (skillIds) {
-          const currentSkillIds = assignment.skills.map((skill) => skill.id);
+          const currentSkillIds = assignment.skills.map(
+            (skill) => skill.skillId,
+          );
 
           const skillsToAdd = skillIds.filter(
             (id) => !currentSkillIds.includes(id),
