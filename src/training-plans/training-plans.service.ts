@@ -309,6 +309,9 @@ export class TrainingPlansService {
     }
   }
 
+  /**
+   * Update function for Update Training Plan, which is not assigned and its assignments
+   */
   async update(
     id: string,
     updateData: UpdateTrainingPlanDto,
@@ -317,6 +320,7 @@ export class TrainingPlansService {
     try {
       const existingTrainingPlan = await this.trainingPlanRepository.findOne({
         where: { id, isDeleted: false },
+        relations: ['skills', 'assignments'],
       });
 
       if (!existingTrainingPlan) {
@@ -345,23 +349,49 @@ export class TrainingPlansService {
           await manager.save(TrainingPlan, existingTrainingPlan);
 
           // Maybe bug here
-          if (skills && skills.length > 0) {
-            await manager.delete(TrainingPlanSkill, {
-              planId: existingTrainingPlan.id,
-            });
+          if (skills) {
+            // await manager.delete(TrainingPlanSkill, {
+            //   planId: existingTrainingPlan.id,
+            // });
 
-            const trainingPlanSkills = skills.map((skillId) =>
-              manager.create(TrainingPlanSkill, {
-                planId: existingTrainingPlan.id,
-                skillId: skillId,
-              }),
+            // const trainingPlanSkills = skills.map((skillId) =>
+            //   manager.create(TrainingPlanSkill, {
+            //     planId: existingTrainingPlan.id,
+            //     skillId: skillId,
+            //   }),
+            // );
+            // await manager.save(TrainingPlanSkill, trainingPlanSkills);
+            const currentSkillIds = existingTrainingPlan.skills.map(
+              (skill) => skill.id,
             );
-            await manager.save(TrainingPlanSkill, trainingPlanSkills);
+            const skillsToAdd = skills.filter(
+              (id) => !currentSkillIds.includes(id),
+            );
+            const skillsToRemove = currentSkillIds.filter(
+              (id) => !skills.includes(id),
+            );
+
+            if (skillsToRemove.length > 0) {
+              await manager.delete(TrainingPlanSkill, {
+                planId: existingTrainingPlan.id,
+                skillId: In(skillsToRemove),
+              });
+            }
+
+            if (skillsToAdd.length > 0) {
+              await manager.save(
+                TrainingPlanSkill,
+                skillsToAdd.map((skillId) => ({
+                  planId: existingTrainingPlan.id,
+                  skillId: skillId,
+                })),
+              );
+            }
           }
 
           // Maybe bug here
           // Update Assignments if provided
-          if (assignments && assignments.length > 0) {
+          if (assignments) {
             const existingAssignments = await manager.find(Assignment, {
               where: { planId: existingTrainingPlan.id, isAssigned: false },
             });

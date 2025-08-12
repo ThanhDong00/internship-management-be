@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Assignment } from './entities/assignment.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { AssignmentDto } from './dto/assignment.dto';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
@@ -425,18 +425,47 @@ export class AssignmentsService {
         await manager.update(Assignment, id, assignmentData);
 
         // delete old skill, create new skill
-        if (skillIds && skillIds.length > 0) {
-          await manager.delete(AssignmentSkill, {
-            assignmentId: id,
-          });
+        // if (skillIds && skillIds.length > 0) {
+        //   await manager.delete(AssignmentSkill, {
+        //     assignmentId: id,
+        //   });
 
-          const newAssignmentSkills = skillIds.map((skillId) =>
-            manager.create(AssignmentSkill, {
-              assignmentId: id,
-              skillId: skillId,
-            }),
+        //   const newAssignmentSkills = skillIds.map((skillId) =>
+        //     manager.create(AssignmentSkill, {
+        //       assignmentId: id,
+        //       skillId: skillId,
+        //     }),
+        //   );
+        //   await manager.save(AssignmentSkill, newAssignmentSkills);
+        // }
+
+        if (skillIds) {
+          const currentSkillIds = assignment.skills.map((skill) => skill.id);
+
+          const skillsToAdd = skillIds.filter(
+            (id) => !currentSkillIds.includes(id),
           );
-          await manager.save(AssignmentSkill, newAssignmentSkills);
+
+          const skillToRemove = currentSkillIds.filter(
+            (id) => !skillIds.includes(id),
+          );
+
+          if (skillToRemove.length > 0) {
+            await manager.delete(AssignmentSkill, {
+              assignmentId: id,
+              skillId: In(skillToRemove),
+            });
+          }
+
+          if (skillsToAdd.length > 0) {
+            await manager.save(
+              AssignmentSkill,
+              skillsToAdd.map((skillId) => ({
+                assignmentId: id,
+                skillId: skillId,
+              })),
+            );
+          }
         }
       });
 
