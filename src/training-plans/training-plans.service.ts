@@ -746,6 +746,7 @@ export class TrainingPlansService {
     link: string,
     internId: string,
     user: SimpleUserDto,
+    token: string,
   ): Promise<Buffer> {
     let browser: Browser | null = null;
     try {
@@ -795,6 +796,9 @@ export class TrainingPlansService {
       await page.setUserAgent(
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       );
+      await page.setExtraHTTPHeaders({
+        Authorization: `Bearer ${token}`,
+      });
       await page.goto(link, { waitUntil: 'networkidle0', timeout: 30000 });
 
       const pdfBuffer = await page.pdf({

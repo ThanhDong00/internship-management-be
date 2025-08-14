@@ -8,6 +8,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -93,6 +94,7 @@ export class TrainingPlansController {
   @Get(':internId/export')
   async exportToPdf(
     @Res() res: Response,
+    @Req() req: Request,
     @Param('internId') internId: string,
     @Query('link') link: string,
     @User() user: SimpleUserDto,
@@ -101,10 +103,18 @@ export class TrainingPlansController {
       throw new BadRequestException('Link is required');
     }
 
+    const authHeader = req.headers['authorization'];
+    const token = authHeader?.split(' ')[1];
+
+    if (!token) {
+      throw new BadRequestException('Authorization token is required');
+    }
+
     const pdfBuffer = await this.trainingPlansService.exportToPdf(
       link,
       internId,
       user,
+      token,
     );
 
     res.set({
