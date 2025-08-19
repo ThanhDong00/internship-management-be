@@ -15,6 +15,17 @@ import { plainToInstance } from 'class-transformer';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 import { AssignmentSkill } from 'src/assignments/entities/assignment-skill.entity';
 import { TrainingPlanSkill } from 'src/training-plans/entities/training-plan-skill.entity';
+import { GetSkillQueryDto } from './dto/get-skill-query.dto';
+
+export interface IGetAllSkillResponse {
+  skills: SkillDto[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}
 
 @Injectable()
 export class SkillsService {
@@ -42,14 +53,38 @@ export class SkillsService {
     }
   }
 
-  async findAll(): Promise<SkillDto[]> {
+  async findAll(query: GetSkillQueryDto): Promise<IGetAllSkillResponse> {
     try {
-      const skills = await this.skillRepository.find({
-        where: {
-          isDeleted: false,
+      const { page = 1, limit = 5, search } = query;
+
+      const skip = (page - 1) * limit;
+
+      const skillsQuery = this.skillRepository
+        .createQueryBuilder('skill')
+        .where('skill.isDeleted = false')
+        .skip(skip)
+        .take(limit);
+
+      if (search) {
+        skillsQuery.andWhere('skill.name ILIKE :search', {
+          search: `%${search}%`,
+        });
+      }
+
+      const skills = await skillsQuery.getMany();
+
+      const totalItems = await skillsQuery.getCount();
+      const totalPages = Math.ceil(totalItems / limit);
+
+      return {
+        skills: plainToInstance(SkillDto, skills),
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems,
+          itemsPerPage: limit,
         },
-      });
-      return plainToInstance(SkillDto, skills);
+      };
     } catch (error) {
       throw new InternalServerErrorException(
         'Error fetching all skills: ' + error.message,
@@ -57,15 +92,41 @@ export class SkillsService {
     }
   }
 
-  async findAllByUserId(userId: string): Promise<SkillDto[]> {
+  async findAllByUserId(
+    userId: string,
+    query: GetSkillQueryDto,
+  ): Promise<IGetAllSkillResponse> {
     try {
-      const skills = await this.skillRepository.find({
-        where: {
-          createdBy: userId,
-          isDeleted: false,
+      const { page = 1, limit = 5, search } = query;
+      const skip = (page - 1) * limit;
+
+      const skillsQuery = this.skillRepository
+        .createQueryBuilder('skill')
+        .where('skill.isDeleted = false')
+        .andWhere('skill.createdBy = :userId', { userId })
+        .skip(skip)
+        .take(limit);
+
+      if (search) {
+        skillsQuery.andWhere('skill.name ILIKE :search', {
+          search: `%${search}%`,
+        });
+      }
+
+      const skills = await skillsQuery.getMany();
+
+      const totalItems = await skillsQuery.getCount();
+      const totalPages = Math.ceil(totalItems / limit);
+
+      return {
+        skills: plainToInstance(SkillDto, skills),
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems,
+          itemsPerPage: limit,
         },
-      });
-      return plainToInstance(SkillDto, skills);
+      };
     } catch (error) {
       throw new InternalServerErrorException(
         'Error fetching skills by user ID: ' + error.message,

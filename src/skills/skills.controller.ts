@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { SkillsService } from './skills.service';
 import { CreateSkillDto } from './dto/create-skill.dto';
@@ -17,6 +18,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User } from 'src/auth/decorators/user.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
+import { GetSkillQueryDto } from './dto/get-skill-query.dto';
 
 @ApiTags('skills')
 @ApiBearerAuth()
@@ -36,16 +38,16 @@ export class SkillsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get('all')
-  async findAll() {
-    return await this.skillsService.findAll();
+  async findAll(@Query() query: GetSkillQueryDto) {
+    return await this.skillsService.findAll(query);
   }
 
   @ApiOperation({ summary: 'Get all skills for a user' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Get()
-  async findAllByUserId(@User() user: any) {
-    return await this.skillsService.findAllByUserId(user.id);
+  async findAllByUserId(@User() user: any, @Query() query: GetSkillQueryDto) {
+    return await this.skillsService.findAllByUserId(user.id, query);
   }
 
   @ApiOperation({ summary: 'Get a skill by ID' })
