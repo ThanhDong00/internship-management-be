@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
@@ -17,6 +18,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { GetTaskQueryDto } from './dto/get-task-query.dto';
 
 @ApiTags('tasks')
 @ApiBearerAuth()
@@ -39,16 +41,19 @@ export class TasksController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mentor')
   @Get()
-  async findAllByUser(@User() user: SimpleUserDto) {
-    return await this.tasksService.findAllByUser(user);
+  async findAllByUser(
+    @User() user: SimpleUserDto,
+    @Query() query: GetTaskQueryDto,
+  ) {
+    return await this.tasksService.findAllByUser(user, query);
   }
 
   @ApiOperation({ summary: 'Get all tasks' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get('all')
-  async findAll() {
-    return await this.tasksService.findAll();
+  async findAll(@Query() query: GetTaskQueryDto) {
+    return await this.tasksService.findAll(query);
   }
 
   @ApiOperation({ summary: 'Get a task by ID' })

@@ -13,6 +13,17 @@ import { SimpleUserDto } from 'src/users/dto/simple-user.dto';
 import { TaskDto } from './dto/task.dto';
 import { plainToInstance } from 'class-transformer';
 import { Assignment } from 'src/assignments/entities/assignment.entity';
+import { GetTaskQueryDto } from './dto/get-task-query.dto';
+
+export interface IGetTasksResponse {
+  tasks: TaskDto[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}
 
 @Injectable()
 export class TasksService {
@@ -36,14 +47,37 @@ export class TasksService {
     }
   }
 
-  async findAllByUser(user: SimpleUserDto): Promise<TaskDto[]> {
+  async findAllByUser(
+    user: SimpleUserDto,
+    query: GetTaskQueryDto,
+  ): Promise<IGetTasksResponse> {
     try {
-      const tasks = await this.taskRepository
+      // const tasks = await this.taskRepository
+      //   .createQueryBuilder('task')
+      //   .leftJoinAndSelect('task.creator', 'creator')
+      //   .where('task.isDeleted = false AND task.createdBy = :userId', {
+      //     userId: user.id,
+      //   })
+      //   .select([
+      //     'task.id',
+      //     'task.name',
+      //     'task.description',
+      //     'creator.id',
+      //     'creator.fullName',
+      //   ])
+      //   .getMany();
+
+      // return plainToInstance(TaskDto, tasks, {
+      //   excludeExtraneousValues: true,
+      // });
+      const { page = 1, limit = 5, search } = query;
+      const skip = (page - 1) * limit;
+
+      const tasksQuery = this.taskRepository
         .createQueryBuilder('task')
         .leftJoinAndSelect('task.creator', 'creator')
-        .where('task.isDeleted = false AND task.createdBy = :userId', {
-          userId: user.id,
-        })
+        .where('task.isDeleted = false')
+        .andWhere('task.createdBy = :userId', { userId: user.id })
         .select([
           'task.id',
           'task.name',
@@ -51,11 +85,30 @@ export class TasksService {
           'creator.id',
           'creator.fullName',
         ])
-        .getMany();
+        .skip(skip)
+        .take(limit);
 
-      return plainToInstance(TaskDto, tasks, {
-        excludeExtraneousValues: true,
-      });
+      if (search) {
+        tasksQuery.andWhere('task.name ILIKE :search', {
+          search: `%${search}%`,
+        });
+      }
+
+      const tasks = await tasksQuery.getMany();
+      const totalItems = await tasksQuery.getCount();
+      const totalPages = Math.ceil(totalItems / limit);
+
+      return {
+        tasks: plainToInstance(TaskDto, tasks, {
+          excludeExtraneousValues: true,
+        }),
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems,
+          itemsPerPage: limit,
+        },
+      };
     } catch (error) {
       throw new InternalServerErrorException(
         'Error fetching tasks: ' + error.message,
@@ -63,9 +116,12 @@ export class TasksService {
     }
   }
 
-  async findAll(): Promise<TaskDto[]> {
+  async findAll(query: GetTaskQueryDto): Promise<IGetTasksResponse> {
     try {
-      const tasks = await this.taskRepository
+      const { page = 1, limit = 5, search } = query;
+      const skip = (page - 1) * limit;
+
+      const tasksQuery = this.taskRepository
         .createQueryBuilder('task')
         .leftJoinAndSelect('task.creator', 'creator')
         .where('task.isDeleted = false')
@@ -76,11 +132,30 @@ export class TasksService {
           'creator.id',
           'creator.fullName',
         ])
-        .getMany();
+        .skip(skip)
+        .take(limit);
 
-      return plainToInstance(TaskDto, tasks, {
-        excludeExtraneousValues: true,
-      });
+      if (search) {
+        tasksQuery.andWhere('task.name ILIKE :search', {
+          search: `%${search}%`,
+        });
+      }
+
+      const tasks = await tasksQuery.getMany();
+      const totalItems = await tasksQuery.getCount();
+      const totalPages = Math.ceil(totalItems / limit);
+
+      return {
+        tasks: plainToInstance(TaskDto, tasks, {
+          excludeExtraneousValues: true,
+        }),
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems,
+          itemsPerPage: limit,
+        },
+      };
     } catch (error) {
       throw new InternalServerErrorException(
         'Error fetching tasks: ' + error.message,
