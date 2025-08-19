@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -84,7 +85,19 @@ export class UsersController {
   @Roles('admin', 'mentor')
   @Get()
   async findAll(@Query() query: FindUsersQueryDto) {
-    return this.usersService.findAll(query.role);
+    const pageNumber = parseInt(query.page);
+    const limitNumber = parseInt(query.limit);
+
+    if (pageNumber < 1 || limitNumber < 1) {
+      throw new BadRequestException('Page and limit must be positive number');
+    }
+
+    return this.usersService.findAll(
+      query.role,
+      pageNumber,
+      limitNumber,
+      query.search,
+    );
   }
 
   @ApiOperation({ summary: 'Get user profile' })

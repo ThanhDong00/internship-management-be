@@ -32,6 +32,12 @@ export interface FindAllUsersResponse {
     completedIntern: number;
     isAssigned: number;
   };
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
 }
 
 @Injectable()
@@ -77,7 +83,12 @@ export class UsersService {
     }
   }
 
-  async findAll(role?: string): Promise<FindAllUsersResponse> {
+  async findAll(
+    role?: string,
+    page: number = 1,
+    limit: number = 5,
+    search?: string,
+  ): Promise<FindAllUsersResponse> {
     try {
       const whereCondition: any = {
         isDeleted: false,
@@ -88,26 +99,56 @@ export class UsersService {
         whereCondition.role = role;
       }
 
-      const users = await this.usersRepository.find({
-        where: whereCondition,
+      const skip = (page - 1) * limit;
+
+      const queryBuilder = this.usersRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.internInformation', 'internInformation')
+        .where('user.isDeleted = :isDeleted', { isDeleted: false });
+
+      if (role) {
+        queryBuilder.andWhere('user.role = :role', { role });
+      }
+
+      if (search) {
+        queryBuilder.andWhere(
+          '(LOWER(user.fullName) LIKE LOWER(:search) OR LOWER(user.username) LIKE LOWER(:search) OR LOWER(user.email) LIKE LOWER(:search))',
+          { search: `%${search}%` },
+        );
+      }
+
+      const totalItems = await queryBuilder.getCount();
+
+      const users = await queryBuilder.skip(skip).take(limit).getMany();
+
+      const allUsers = await this.usersRepository.find({
+        where: { isDeleted: false },
         relations: ['internInformation'],
       });
 
       const total = {
-        intern: users.filter((user) => user.role === 'intern').length,
-        mentor: users.filter((user) => user.role === 'mentor').length,
-        admin: users.filter((user) => user.role === 'admin').length,
-        completedIntern: users.filter(
+        intern: allUsers.filter((user) => user.role === 'intern').length,
+        mentor: allUsers.filter((user) => user.role === 'mentor').length,
+        admin: allUsers.filter((user) => user.role === 'admin').length,
+        completedIntern: allUsers.filter(
           (user) =>
             user.role === 'intern' &&
             user.internInformation?.status === 'Completed',
         ).length,
-        isAssigned: users.filter((user) => user.isAssigned).length,
+        isAssigned: allUsers.filter((user) => user.isAssigned).length,
       };
+
+      const totalPages = Math.ceil(totalItems / limit);
 
       return {
         users: plainToInstance(UserDto, users),
         total,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems,
+          itemsPerPage: limit,
+        },
       };
     } catch (error) {
       throw new HttpException('Error fetching users: ' + error.message, 500);

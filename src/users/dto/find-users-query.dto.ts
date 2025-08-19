@@ -12,4 +12,13 @@ export class FindUsersQueryDto {
     message: 'Role must be one of: admin, mentor, intern',
   })
   role?: 'admin' | 'mentor' | 'intern';
+
+  @ApiPropertyOptional()
+  page: string = '1';
+
+  @ApiPropertyOptional()
+  limit: string = '5';
+
+  @ApiPropertyOptional()
+  search?: string;
 }
