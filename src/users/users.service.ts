@@ -94,7 +94,6 @@ export class UsersService {
         isDeleted: false,
       };
 
-      // Nếu có role parameter, thêm vào điều kiện where
       if (role) {
         whereCondition.role = role;
       }
@@ -122,7 +121,7 @@ export class UsersService {
       const users = await queryBuilder.skip(skip).take(limit).getMany();
 
       const allUsers = await this.usersRepository.find({
-        where: { isDeleted: false },
+        where: whereCondition,
         relations: ['internInformation'],
       });
 
