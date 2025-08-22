@@ -72,6 +72,8 @@ export class TrainingPlansService {
     try {
       const trainingPlans = await this.trainingPlanRepository
         .createQueryBuilder('plan')
+        .leftJoin('plan.creator', 'creator')
+        .addSelect(['creator.fullName'])
         .leftJoinAndSelect('plan.skills', 'planSkill')
         .leftJoinAndSelect('planSkill.skill', 'skill')
         .leftJoinAndSelect(

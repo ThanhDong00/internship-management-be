@@ -1,6 +1,7 @@
 import { Exclude, Expose, Type } from 'class-transformer';
 import { TrainingPlanSkillDto } from './training-plan-skill.dto';
 import { AssignmentDto } from 'src/assignments/dto/assignment.dto';
+import { UserDto } from 'src/users/dto/user.dto';
 
 export class TrainingPlanDto {
   @Expose()
@@ -17,6 +18,10 @@ export class TrainingPlanDto {
 
   @Expose()
   createdBy: string;
+
+  @Expose()
+  @Type(() => UserDto)
+  creator: UserDto;
 
   @Expose()
   isPublic: boolean;

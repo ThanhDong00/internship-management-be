@@ -1,15 +1,27 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { TrainingPlanSkill } from './training-plan-skill.entity';
 import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { InternInformation } from 'src/interns-information/entities/intern-information.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Entity()
 export class TrainingPlan {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ nullable: true })
   createdBy: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'createdBy' })
+  creator: User;
 
   @Column()
   name: string;
