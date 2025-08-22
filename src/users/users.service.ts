@@ -85,8 +85,8 @@ export class UsersService {
 
   async findAll(
     role?: string,
-    page: number = 1,
-    limit: number = 5,
+    page?: number,
+    limit?: number,
     search?: string,
   ): Promise<FindAllUsersResponse> {
     try {
@@ -98,7 +98,10 @@ export class UsersService {
         whereCondition.role = role;
       }
 
-      const skip = (page - 1) * limit;
+      let skip = 0;
+      if (page && limit) {
+        skip = (page - 1) * limit;
+      }
 
       const queryBuilder = this.usersRepository
         .createQueryBuilder('user')
@@ -118,7 +121,12 @@ export class UsersService {
 
       const totalItems = await queryBuilder.getCount();
 
-      const users = await queryBuilder.skip(skip).take(limit).getMany();
+      // const users = await queryBuilder.skip(skip).take(limit).getMany();
+      if (limit) {
+        queryBuilder.skip(skip).take(limit);
+      }
+
+      const users = await queryBuilder.getMany();
 
       const allUsers = await this.usersRepository.find({
         where: whereCondition,
@@ -137,16 +145,16 @@ export class UsersService {
         isAssigned: allUsers.filter((user) => user.isAssigned).length,
       };
 
-      const totalPages = Math.ceil(totalItems / limit);
+      const totalPages = Math.ceil(totalItems / (limit || totalItems));
 
       return {
         users: plainToInstance(UserDto, users),
         total,
         pagination: {
-          currentPage: page,
+          currentPage: page || 1,
           totalPages,
           totalItems,
-          itemsPerPage: limit,
+          itemsPerPage: limit || totalItems,
         },
       };
     } catch (error) {

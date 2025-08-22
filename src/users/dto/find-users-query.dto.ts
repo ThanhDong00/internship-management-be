@@ -14,10 +14,10 @@ export class FindUsersQueryDto {
   role?: 'admin' | 'mentor' | 'intern';
 
   @ApiPropertyOptional()
-  page: string = '1';
+  page: string;
 
   @ApiPropertyOptional()
-  limit: string = '5';
+  limit: string;
 
   @ApiPropertyOptional()
   search?: string;

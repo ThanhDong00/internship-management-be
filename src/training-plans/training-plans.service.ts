@@ -82,9 +82,12 @@ export class TrainingPlansService {
         .leftJoinAndSelect('assignment.task', 'task')
         .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
         .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
-        .where('plan.isDeleted = false AND plan.createdBy = :userId', {
-          userId: userId,
-        })
+        .where(
+          '(plan.isDeleted = false) AND (plan.createdBy = :userId OR plan.isPublic = true)',
+          {
+            userId: userId,
+          },
+        )
         .getMany();
 
       return plainToInstance(TrainingPlanDto, trainingPlans, {
