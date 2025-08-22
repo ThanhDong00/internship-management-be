@@ -68,9 +68,12 @@ export class TrainingPlansService {
     }
   }
 
-  async findAllByUser(userId: string): Promise<TrainingPlanDto[]> {
+  async findAllByUser(
+    userId: string,
+    user: SimpleUserDto,
+  ): Promise<TrainingPlanDto[]> {
     try {
-      const trainingPlans = await this.trainingPlanRepository
+      const query = this.trainingPlanRepository
         .createQueryBuilder('plan')
         .leftJoin('plan.creator', 'creator')
         .addSelect(['creator.fullName'])
@@ -83,14 +86,20 @@ export class TrainingPlansService {
         )
         .leftJoinAndSelect('assignment.task', 'task')
         .leftJoinAndSelect('assignment.skills', 'assignmentSkill')
-        .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail')
-        .where(
+        .leftJoinAndSelect('assignmentSkill.skill', 'assignmentSkillDetail');
+
+      if (user.role === 'admin') {
+        query.where(
           '(plan.isDeleted = false) AND (plan.createdBy = :userId OR plan.isPublic = true)',
-          {
-            userId: userId,
-          },
-        )
-        .getMany();
+          { userId },
+        );
+      } else {
+        query.where('(plan.isDeleted = false) AND plan.createdBy = :userId', {
+          userId,
+        });
+      }
+
+      const trainingPlans = await query.getMany();
 
       return plainToInstance(TrainingPlanDto, trainingPlans, {
         excludeExtraneousValues: true,

@@ -60,7 +60,7 @@ export class TrainingPlansController {
   @Roles('admin', 'mentor')
   @Get()
   async findAllByUser(@User() user: SimpleUserDto) {
-    return this.trainingPlansService.findAllByUser(user.id);
+    return this.trainingPlansService.findAllByUser(user.id, user);
   }
 
   @ApiOperation({ summary: 'Get all training plans' })
